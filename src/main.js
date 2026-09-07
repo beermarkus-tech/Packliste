@@ -1,4 +1,5 @@
 import './styles.css';
+import Alpine from 'alpinejs';
 import { registerRoute, getRender, startRouter, navigateTo } from './lib/router.js';
 import { watchAuthState, isAllowedUser, signOutUser } from './lib/auth.js';
 import { renderSignIn } from './screens/signin.js';
@@ -15,6 +16,9 @@ const TABS = [
 ];
 
 TABS.forEach((tab) => registerRoute(tab.path, tab.render));
+
+window.Alpine = Alpine;
+Alpine.start();
 
 const app = document.querySelector('#app');
 let shellStarted = false;
