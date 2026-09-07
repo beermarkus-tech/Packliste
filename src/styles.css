@@ -1,12 +1,136 @@
 :root {
   color-scheme: light dark;
+
+  --color-primary: #0E7C86;
+  --color-primary-pressed: #0B5E66;
+  --color-accent: #F2994A;
+  --color-success: #2F9E44;
+  --color-bg: #F7F5F1;
+  --color-surface: #FFFFFF;
+  --color-text: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-border: #E5E7EB;
+
+  --nav-height: 60px;
+  --rail-width: 88px;
+  --touch-target: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #4FB4BC;
+    --color-primary-pressed: #4FB4BC;
+    --color-accent: #F5A962;
+    --color-success: #4CB963;
+    --color-bg: #121417;
+    --color-surface: #1C1F23;
+    --color-text: #E5E7EB;
+    --color-text-secondary: #9CA3AF;
+    --color-border: #2C3036;
+  }
 }
 
 * {
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --- App shell --- */
+
+.app-main {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: calc(var(--nav-height) + 16px);
+}
+
+.screen h2 {
+  margin-top: 0;
+}
+
+.screen-placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* --- Bottom tab bar (phone) --- */
+
+.nav-tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  display: flex;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--touch-target);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-tab .nav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.nav-tab.active {
+  color: var(--color-primary);
+}
+
+/* --- Tablet breakpoint: left rail instead of bottom tabs --- */
+
+@media (min-width: 768px) {
+  #app {
+    flex-direction: row;
+  }
+
+  .nav-tabs {
+    position: static;
+    flex-direction: column;
+    width: var(--rail-width);
+    height: 100vh;
+    border-top: none;
+    border-right: 1px solid var(--color-border);
+    padding-top: 24px;
+    gap: 8px;
+  }
+
+  .nav-tab {
+    flex: 0 0 auto;
+    font-size: 12px;
+    padding: 8px 0;
+  }
+
+  .app-main {
+    padding-bottom: 16px;
+  }
 }
