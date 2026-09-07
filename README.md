@@ -29,7 +29,11 @@ npm run preview   # preview the production build locally
 
 ## Deployment
 
-Pushes to `main` build and publish automatically to GitHub Pages via a GitHub Actions workflow (added in a later step). The app is served from the `/Packliste/` subpath.
+Pushes build and publish automatically to GitHub Pages via `.github/workflows/deploy.yml`. The app is served from the `/Packliste/` subpath and is installable (manifest + service worker via `vite-plugin-pwa`).
+
+**One-time setup required in the repo settings** (GitHub won't let a workflow enable this on its own): Settings → Pages → Build and deployment → Source: **GitHub Actions**. Once that's set, the next push triggers a deploy and the Pages URL appears on that same Settings → Pages screen.
+
+The workflow currently also deploys on push to the `claude/pwa-development-plan-xvo855` dev branch (in addition to `main`) so the app is installable during development before the first merge — remove that branch from the trigger once merged.
 
 ## Firebase setup
 
