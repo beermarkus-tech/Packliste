@@ -67,6 +67,18 @@ body {
   color: var(--color-text-secondary);
 }
 
+.settings-section {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.settings-section h3 {
+  margin-top: 0;
+}
+
 /* --- Sign-in gate --- */
 
 .signin-screen {
