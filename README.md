@@ -33,4 +33,6 @@ Pushes to `main` build and publish automatically to GitHub Pages via a GitHub Ac
 
 ## Firebase setup
 
-This app reuses the existing **exercise-tracker** Firebase project via a separate named Firestore database, rather than creating a new project. See `src/lib/firebase.js` (added in a later step) for configuration details.
+This app reuses the existing **exercise-tracker** Firebase project, registered as its own Web app within that project, with its own Firestore database named `packliste` (kept separate from the project's default database). Config lives in `src/lib/firebase.js` — Firebase web config values aren't secret, so they're committed directly rather than injected at build time.
+
+Auth is Google Sign-In (not email/password) restricted to one fixed Google account. The Firestore security rules enforcing that live in `firestore.rules` — paste that file's contents into Firebase console → Firestore Database → select the `packliste` database → Rules tab → Publish (there's no Firebase CLI wired up in this repo, so rule changes are deployed manually via the console for now).

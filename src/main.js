@@ -1,5 +1,7 @@
 import './styles.css';
 import { registerRoute, getRender, startRouter, navigateTo } from './lib/router.js';
+import { watchAuthState, isAllowedUser, signOutUser } from './lib/auth.js';
+import { renderSignIn } from './screens/signin.js';
 import { renderHome } from './screens/home.js';
 import { renderPrep } from './screens/prep.js';
 import { renderChecklist } from './screens/checklist.js';
@@ -15,30 +17,52 @@ const TABS = [
 TABS.forEach((tab) => registerRoute(tab.path, tab.render));
 
 const app = document.querySelector('#app');
-app.innerHTML = `
-  <nav class="nav-tabs">
-    ${TABS.map(
-      (tab) => `
-        <button class="nav-tab" data-path="${tab.path}">
-          <span class="nav-icon">${tab.icon}</span>
-          <span class="nav-label">${tab.label}</span>
-        </button>
-      `
-    ).join('')}
-  </nav>
-  <main class="app-main"></main>
-`;
+let shellStarted = false;
 
-const main = app.querySelector('.app-main');
-const navButtons = app.querySelectorAll('.nav-tab');
+function renderAppShell() {
+  app.innerHTML = `
+    <nav class="nav-tabs">
+      ${TABS.map(
+        (tab) => `
+          <button class="nav-tab" data-path="${tab.path}">
+            <span class="nav-icon">${tab.icon}</span>
+            <span class="nav-label">${tab.label}</span>
+          </button>
+        `
+      ).join('')}
+      <button class="nav-tab" id="signout-btn" title="Sign out">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Sign out</span>
+      </button>
+    </nav>
+    <main class="app-main"></main>
+  `;
 
-navButtons.forEach((button) => {
-  button.addEventListener('click', () => navigateTo(button.dataset.path));
-});
+  const main = app.querySelector('.app-main');
+  const navButtons = app.querySelectorAll('.nav-tab[data-path]');
 
-startRouter((path) => {
-  getRender(path)(main);
   navButtons.forEach((button) => {
-    button.classList.toggle('active', button.dataset.path === path);
+    button.addEventListener('click', () => navigateTo(button.dataset.path));
   });
+
+  app.querySelector('#signout-btn').addEventListener('click', () => signOutUser());
+
+  startRouter((path) => {
+    getRender(path)(main);
+    navButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.path === path);
+    });
+  });
+}
+
+watchAuthState((user) => {
+  if (isAllowedUser(user)) {
+    if (!shellStarted) {
+      shellStarted = true;
+      renderAppShell();
+    }
+  } else {
+    shellStarted = false;
+    renderSignIn(app, { deniedUser: user || undefined });
+  }
 });

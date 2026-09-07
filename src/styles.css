@@ -67,6 +67,38 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* --- Sign-in gate --- */
+
+.signin-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.signin-error {
+  color: var(--color-accent);
+}
+
+.btn-primary {
+  min-height: var(--touch-target);
+  padding: 0 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn-primary:active {
+  background: var(--color-primary-pressed);
+}
+
 /* --- Bottom tab bar (phone) --- */
 
 .nav-tabs {
