@@ -146,6 +146,16 @@ Alpine.data('prep', () => ({
     await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
   },
 
+  // The modal's combo row toggles whichever side is currently active (Koffer
+  // by default when neither is assigned yet) — same effect as tapping that
+  // bucket's own row directly.
+  comboModalToggle() {
+    if (!this.bucketModal || !this.kofferBucket || !this.hinreiseBucket) return;
+    const combo = this.comboStateFor(this.bucketModal);
+    const activeId = combo === 'hinreise' ? this.hinreiseBucket.id : this.kofferBucket.id;
+    this.toggleBucket(this.bucketModal, activeId);
+  },
+
   isExcluded(catalogItem) {
     return this.entryFor(catalogItem.id)?.excluded === true;
   },
@@ -352,6 +362,16 @@ export function renderPrep(container) {
               <span x-text="bucket.icon"></span>
               <span x-text="bucket.name"></span>
               <span class="bucket-toggle-check" x-show="bucketModal && isAssigned(bucketModal, bucket.id)">✓</span>
+            </button>
+          </template>
+          <template x-if="kofferBucket && hinreiseBucket">
+            <button
+              class="bucket-toggle-btn"
+              :class="bucketModal && comboStateFor(bucketModal) ? 'bucket-toggle-active' : ''"
+              @click="comboModalToggle()">
+              <span x-text="bucketModal && comboStateFor(bucketModal) === 'hinreise' ? hinreiseBucket.icon : kofferBucket.icon"></span>
+              <span>Koffer/Hinreise</span>
+              <span class="bucket-toggle-check" x-show="bucketModal && comboStateFor(bucketModal)">✓</span>
             </button>
           </template>
           <button class="btn-secondary" @click="closeBucketModal()">Done</button>

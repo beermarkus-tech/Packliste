@@ -492,8 +492,8 @@ body {
 }
 
 .chip-mini-combo {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
   cursor: pointer;
 }
 
