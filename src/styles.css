@@ -51,6 +51,26 @@ body {
   min-height: 100vh;
 }
 
+/* --- Build badge --- */
+
+#build-badge {
+  position: fixed;
+  top: env(safe-area-inset-top, 0);
+  right: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-right: none;
+  border-radius: 0 0 0 8px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
 /* --- App shell --- */
 
 .app-main {

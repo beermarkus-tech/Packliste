@@ -29,6 +29,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_BUILD_NUMBER: ${{ github.run_number }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
