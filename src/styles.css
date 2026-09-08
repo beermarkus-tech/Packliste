@@ -517,3 +517,134 @@ body {
     min-width: 200px;
   }
 }
+
+/* --- Checklist screen --- */
+
+.bucket-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 16px 0 8px;
+  margin-bottom: 8px;
+}
+
+.bucket-tab {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-target);
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.bucket-tab-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.bucket-panel {
+  display: none;
+}
+
+.bucket-panel-active {
+  display: block;
+}
+
+.bucket-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.bucket-progress {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.checklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch-target);
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.checklist-checkbox {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+}
+
+.checklist-checkbox-checked {
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.checklist-icon {
+  flex: 0 0 auto;
+}
+
+.checklist-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-row-checked .checklist-name {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.checklist-row-checked {
+  opacity: 0.7;
+}
+
+@media (min-width: 768px) {
+  .bucket-tabs {
+    display: none;
+  }
+
+  .bucket-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  .bucket-panel {
+    display: block;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+}
