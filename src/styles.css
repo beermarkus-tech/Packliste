@@ -403,8 +403,13 @@ body {
 .category-filter-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+.add-item-tablet-only {
+  display: none;
 }
 
 .filter-chip {
@@ -620,13 +625,25 @@ body {
 
   .item-list {
     display: block;
-    column-count: 3;
+    column-count: 4;
     column-gap: 24px;
+    column-rule: 1px solid var(--color-border);
   }
 
   .item-row {
     break-inside: avoid;
     flex-wrap: nowrap;
+  }
+
+  .add-item-mobile-only {
+    display: none;
+  }
+
+  .add-item-tablet-only {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
   }
 }
 

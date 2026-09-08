@@ -69,6 +69,21 @@ Alpine.data('checklist', () => ({
     return this.hiddenBucketIds.includes(bucketId);
   },
 
+  showAllBuckets() {
+    this.hiddenBucketIds = [];
+  },
+
+  async unpackAll() {
+    if (!confirm('Uncheck all items across every checklist? This cannot be undone.')) return;
+    const items = this.itemDoc?.items || [];
+    const next = items.map((e) => ({ ...e, bucketIds: [...e.bucketIds], checked: {} }));
+    try {
+      await updateTripItems(this.currentItem.id, next);
+    } catch (err) {
+      console.error('Failed to unpack all', err);
+    }
+  },
+
   catalogFor(itemId) {
     return this.catalog.find((c) => c.id === itemId);
   },
@@ -161,7 +176,12 @@ export function renderChecklist(container) {
 
   container.innerHTML = `
     <div class="screen" data-screen="checklist" x-data="checklist">
-      <h2 x-text="itemDoc?.name || '…'"></h2>
+      <div class="prep-header">
+        <h2 x-text="itemDoc?.name || '…'"></h2>
+        <div class="prep-header-actions">
+          <button class="btn-secondary" @click="unpackAll()">Unpack all</button>
+        </div>
+      </div>
 
       <div class="bucket-tabs">
         <template x-for="bucket in buckets" :key="bucket.id">
@@ -174,6 +194,7 @@ export function renderChecklist(container) {
             <span class="filter-chip-percent" x-show="percentFor(bucket.id) !== null" x-text="percentFor(bucket.id) + '%'"></span>
           </button>
         </template>
+        <button class="filter-chip filter-chip-reset" x-show="hiddenBucketIds.length > 0" @click="showAllBuckets()">Show all</button>
       </div>
 
       <div class="bucket-panels">
