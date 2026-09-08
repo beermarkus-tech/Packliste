@@ -33,6 +33,7 @@ Alpine.data('prep', () => ({
   catalog: [],
   buckets: [],
   selectedCategories: [],
+  comboFilterActive: false,
   addingItem: false,
   quantityModal: null, // catalog item currently being edited, or null
   bucketModal: null, // catalog item currently being edited, or null
@@ -65,10 +66,13 @@ Alpine.data('prep', () => ({
   },
 
   get filteredItems() {
-    const items =
+    let items =
       this.selectedCategories.length === 0
         ? this.catalog
         : this.catalog.filter((item) => this.selectedCategories.includes(item.category));
+    if (this.comboFilterActive) {
+      items = items.filter((item) => this.comboStateFor(item));
+    }
     return [...items].sort(
       (a, b) => a.category.localeCompare(b.category, 'de') || a.name.localeCompare(b.name, 'de')
     );
@@ -84,8 +88,17 @@ Alpine.data('prep', () => ({
       : [...this.selectedCategories, category];
   },
 
+  toggleComboFilter() {
+    this.comboFilterActive = !this.comboFilterActive;
+  },
+
+  get hasActiveFilters() {
+    return this.selectedCategories.length > 0 || this.comboFilterActive;
+  },
+
   resetFilters() {
     this.selectedCategories = [];
+    this.comboFilterActive = false;
   },
 
   entryFor(itemId) {
@@ -291,6 +304,12 @@ export function renderPrep(container) {
       </div>
 
       <div class="category-filter-row">
+        <button
+          class="filter-chip filter-chip-combo"
+          :class="comboFilterActive ? 'filter-chip-active' : ''"
+          @click="toggleComboFilter()"
+          x-show="kofferBucket && hinreiseBucket"
+        >🧳✈️ Koffer/Hinreise</button>
         <template x-for="category in categoryNames" :key="category">
           <button
             class="filter-chip"
@@ -299,7 +318,7 @@ export function renderPrep(container) {
             x-text="category"
           ></button>
         </template>
-        <button class="filter-chip filter-chip-reset" x-show="selectedCategories.length > 0" @click="resetFilters()">Show all</button>
+        <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
       </div>
 
       <div class="item-list">

@@ -378,6 +378,17 @@ body {
   border-style: dashed;
 }
 
+.filter-chip-combo {
+  background: var(--color-combo);
+  border-color: var(--color-combo);
+}
+
+.filter-chip-combo.filter-chip-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
 .item-list {
   display: flex;
   flex-direction: column;
