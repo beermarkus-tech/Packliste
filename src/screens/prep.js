@@ -32,7 +32,7 @@ Alpine.data('prep', () => ({
   itemDoc: null,
   catalog: [],
   buckets: [],
-  expanded: {},
+  selectedCategories: [],
   addingItem: false,
   quantityModal: null, // catalog item currently being edited, or null
   bucketModal: null, // catalog item currently being edited, or null
@@ -58,26 +58,34 @@ Alpine.data('prep', () => ({
     this._unsubBuckets?.();
   },
 
-  get categories() {
-    const byCategory = new Map();
-    for (const item of this.catalog) {
-      if (!byCategory.has(item.category)) byCategory.set(item.category, []);
-      byCategory.get(item.category).push(item);
-    }
-    return [...byCategory.keys()]
-      .sort((a, b) => a.localeCompare(b, 'de'))
-      .map((category) => ({
-        category,
-        items: byCategory.get(category).sort((a, b) => a.name.localeCompare(b.name, 'de')),
-      }));
+  get categoryNames() {
+    return [...new Set(this.catalog.map((item) => item.category))].sort((a, b) =>
+      a.localeCompare(b, 'de')
+    );
   },
 
-  isExpanded(category) {
-    return this.expanded[category] !== false; // default open
+  get filteredItems() {
+    const items =
+      this.selectedCategories.length === 0
+        ? this.catalog
+        : this.catalog.filter((item) => this.selectedCategories.includes(item.category));
+    return [...items].sort(
+      (a, b) => a.category.localeCompare(b.category, 'de') || a.name.localeCompare(b.name, 'de')
+    );
   },
 
-  toggleCategory(category) {
-    this.expanded[category] = !this.isExpanded(category);
+  isCategorySelected(category) {
+    return this.selectedCategories.includes(category);
+  },
+
+  toggleCategoryFilter(category) {
+    this.selectedCategories = this.isCategorySelected(category)
+      ? this.selectedCategories.filter((c) => c !== category)
+      : [...this.selectedCategories, category];
+  },
+
+  resetFilters() {
+    this.selectedCategories = [];
   },
 
   entryFor(itemId) {
@@ -213,31 +221,35 @@ export function renderPrep(container) {
         </div>
       </div>
 
-      <template x-for="group in categories" :key="group.category">
-        <section class="category-section">
-          <button class="category-header" @click="toggleCategory(group.category)">
-            <span x-text="group.category"></span>
-            <span x-text="isExpanded(group.category) ? '▾' : '▸'"></span>
-          </button>
-          <div class="category-items" x-show="isExpanded(group.category)">
-            <template x-for="item in group.items" :key="item.id">
-              <div class="item-row">
-                <span class="item-name" @click="openQuantityModal(item)">
-                  <span x-text="item.icon"></span>
-                  <span x-text="item.name"></span>
-                  <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
-                </span>
-                <span class="assigned-chips" @click="openBucketModal(item)">
-                  <template x-for="bucket in assignedBuckets(item)" :key="bucket.id">
-                    <span class="chip-mini" :title="bucket.name" x-text="bucket.icon"></span>
-                  </template>
-                  <span class="chip-mini chip-mini-empty" x-show="assignedBuckets(item).length === 0">+</span>
-                </span>
-              </div>
-            </template>
+      <div class="category-filter-row">
+        <template x-for="category in categoryNames" :key="category">
+          <button
+            class="filter-chip"
+            :class="isCategorySelected(category) ? 'filter-chip-active' : ''"
+            @click="toggleCategoryFilter(category)"
+            x-text="category"
+          ></button>
+        </template>
+        <button class="filter-chip filter-chip-reset" x-show="selectedCategories.length > 0" @click="resetFilters()">Show all</button>
+      </div>
+
+      <div class="item-list">
+        <template x-for="item in filteredItems" :key="item.id">
+          <div class="item-row">
+            <span class="item-name" @click="openQuantityModal(item)">
+              <span x-text="item.icon"></span>
+              <span x-text="item.name"></span>
+              <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
+            </span>
+            <span class="assigned-chips" @click="openBucketModal(item)">
+              <template x-for="bucket in assignedBuckets(item)" :key="bucket.id">
+                <span class="chip-mini" :title="bucket.name" x-text="bucket.icon"></span>
+              </template>
+              <span class="chip-mini chip-mini-empty" x-show="assignedBuckets(item).length === 0">+</span>
+            </span>
           </div>
-        </section>
-      </template>
+        </template>
+      </div>
 
       <div class="modal-overlay" x-show="addingItem" x-cloak @click.self="closeAddItem()">
         <div class="modal-sheet">
