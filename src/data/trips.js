@@ -38,6 +38,7 @@ export async function createTripFromTemplate(templateId, { name, date } = {}) {
     bucketIds: [...item.bucketIds],
     quantity: item.quantity,
     checked: {},
+    ...(item.comboSide ? { comboSide: item.comboSide } : {}),
   }));
   return createTrip({ name: name || template.name, date, sourceTemplateId: templateId, items });
 }

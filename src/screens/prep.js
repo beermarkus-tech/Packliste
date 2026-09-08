@@ -114,46 +114,43 @@ Alpine.data('prep', () => ({
     return this.buckets.find((bucket) => bucket.name === 'Hinreise');
   },
 
-  // 'koffer' | 'hinreise' | null — null when neither or both are assigned,
-  // in which case they fall back to rendering as two plain chips.
+  // 'koffer' | 'hinreise' | null. Independent of bucketIds — selecting the
+  // combo in the modal clears any direct Koffer/Hinreise assignment, and
+  // selecting Koffer/Hinreise directly clears the combo, so the two never
+  // overlap.
   comboStateFor(catalogItem) {
-    const koffer = this.kofferBucket;
-    const hinreise = this.hinreiseBucket;
-    if (!koffer || !hinreise) return null;
-    const hasKoffer = this.isAssigned(catalogItem, koffer.id);
-    const hasHinreise = this.isAssigned(catalogItem, hinreise.id);
-    if (hasKoffer === hasHinreise) return null;
-    return hasKoffer ? 'koffer' : 'hinreise';
+    const side = this.entryFor(catalogItem.id)?.comboSide;
+    return side === 'koffer' || side === 'hinreise' ? side : null;
   },
 
-  otherAssignedBuckets(catalogItem) {
-    const combo = this.comboStateFor(catalogItem);
-    if (!combo) return this.assignedBuckets(catalogItem);
-    const excludeIds = new Set([this.kofferBucket?.id, this.hinreiseBucket?.id]);
-    return this.assignedBuckets(catalogItem).filter((bucket) => !excludeIds.has(bucket.id));
-  },
-
+  // Row-level chip: flips directly between the two sides, no modal.
   async toggleComboBucket(catalogItem) {
     const combo = this.comboStateFor(catalogItem);
     if (!combo) return;
-    const fromId = combo === 'koffer' ? this.kofferBucket.id : this.hinreiseBucket.id;
-    const toId = combo === 'koffer' ? this.hinreiseBucket.id : this.kofferBucket.id;
     const items = this.itemDoc?.items || [];
-    const existing = findEntry(items, catalogItem.id);
-    const nextBucketIds = (existing?.bucketIds || []).filter((id) => id !== fromId);
-    nextBucketIds.push(toId);
-    const next = upsertEntry(items, catalogItem.id, { bucketIds: nextBucketIds }, catalogItem);
+    const next = upsertEntry(
+      items,
+      catalogItem.id,
+      { comboSide: combo === 'koffer' ? 'hinreise' : 'koffer' },
+      catalogItem
+    );
     await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
   },
 
-  // The modal's combo row toggles whichever side is currently active (Koffer
-  // by default when neither is assigned yet) — same effect as tapping that
-  // bucket's own row directly.
-  comboModalToggle() {
-    if (!this.bucketModal || !this.kofferBucket || !this.hinreiseBucket) return;
-    const combo = this.comboStateFor(this.bucketModal);
-    const activeId = combo === 'hinreise' ? this.hinreiseBucket.id : this.kofferBucket.id;
-    this.toggleBucket(this.bucketModal, activeId);
+  // Modal row: selecting the combo (default Koffer) clears any direct
+  // Koffer/Hinreise bucket assignment; tapping again clears the combo.
+  async toggleComboSelection(catalogItem) {
+    if (!this.kofferBucket || !this.hinreiseBucket) return;
+    const items = this.itemDoc?.items || [];
+    const existing = findEntry(items, catalogItem.id);
+    const alreadyCombo = !!this.comboStateFor(catalogItem);
+    const excludeIds = new Set([this.kofferBucket.id, this.hinreiseBucket.id]);
+    const nextBucketIds = (existing?.bucketIds || []).filter((id) => !excludeIds.has(id));
+    const patch = alreadyCombo
+      ? { comboSide: null, bucketIds: nextBucketIds }
+      : { comboSide: 'koffer', bucketIds: nextBucketIds };
+    const next = upsertEntry(items, catalogItem.id, patch, catalogItem);
+    await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
   },
 
   isExcluded(catalogItem) {
@@ -183,10 +180,16 @@ Alpine.data('prep', () => ({
     const items = this.itemDoc?.items || [];
     const existing = findEntry(items, catalogItem.id);
     const currentBucketIds = existing?.bucketIds || [];
-    const nextBucketIds = currentBucketIds.includes(bucketId)
-      ? currentBucketIds.filter((id) => id !== bucketId)
-      : [...currentBucketIds, bucketId];
-    const next = upsertEntry(items, catalogItem.id, { bucketIds: nextBucketIds }, catalogItem);
+    const turningOn = !currentBucketIds.includes(bucketId);
+    const nextBucketIds = turningOn
+      ? [...currentBucketIds, bucketId]
+      : currentBucketIds.filter((id) => id !== bucketId);
+    const patch = { bucketIds: nextBucketIds };
+    const isComboMember = bucketId === this.kofferBucket?.id || bucketId === this.hinreiseBucket?.id;
+    if (isComboMember && turningOn && existing?.comboSide) {
+      patch.comboSide = null;
+    }
+    const next = upsertEntry(items, catalogItem.id, patch, catalogItem);
     await this.persist(next).catch((err) => console.error('Failed to save bucket assignment', err));
   },
 
@@ -222,10 +225,11 @@ Alpine.data('prep', () => ({
     if (!confirm("Overwrite the template's items with this trip's current assignments? Checked state is not affected.")) {
       return;
     }
-    const items = (this.itemDoc.items || []).map(({ itemId, bucketIds, quantity }) => ({
+    const items = (this.itemDoc.items || []).map(({ itemId, bucketIds, quantity, comboSide }) => ({
       itemId,
       bucketIds: [...bucketIds],
       quantity,
+      ...(comboSide ? { comboSide } : {}),
     }));
     try {
       await updateTemplateItems(this.itemDoc.sourceTemplateId, items);
@@ -307,12 +311,12 @@ export function renderPrep(container) {
               <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
             </span>
             <span class="assigned-chips" @click="openBucketModal(item)">
-              <template x-for="bucket in otherAssignedBuckets(item)" :key="bucket.id">
+              <template x-for="bucket in assignedBuckets(item)" :key="bucket.id">
                 <span class="chip-mini" :title="bucket.name" x-text="bucket.icon"></span>
               </template>
               <span
                 class="chip-mini chip-mini-empty"
-                x-show="comboStateFor(item) && otherAssignedBuckets(item).length === 0"
+                x-show="comboStateFor(item) && assignedBuckets(item).length === 0"
               >+</span>
               <span
                 class="chip-mini chip-mini-combo"
@@ -354,6 +358,16 @@ export function renderPrep(container) {
       <div class="modal-overlay" x-show="bucketModal" x-cloak @click.self="closeBucketModal()">
         <div class="modal-sheet">
           <h3 x-text="bucketModal ? bucketModal.icon + ' ' + bucketModal.name : ''"></h3>
+          <template x-if="kofferBucket && hinreiseBucket">
+            <button
+              class="bucket-toggle-btn bucket-toggle-combo"
+              :class="bucketModal && comboStateFor(bucketModal) ? 'bucket-toggle-active' : ''"
+              @click="toggleComboSelection(bucketModal)">
+              <span x-text="bucketModal && comboStateFor(bucketModal) === 'hinreise' ? hinreiseBucket.icon : kofferBucket.icon"></span>
+              <span>Koffer/Hinreise</span>
+              <span class="bucket-toggle-check" x-show="bucketModal && comboStateFor(bucketModal)">✓</span>
+            </button>
+          </template>
           <template x-for="bucket in buckets" :key="bucket.id">
             <button
               class="bucket-toggle-btn"
@@ -362,16 +376,6 @@ export function renderPrep(container) {
               <span x-text="bucket.icon"></span>
               <span x-text="bucket.name"></span>
               <span class="bucket-toggle-check" x-show="bucketModal && isAssigned(bucketModal, bucket.id)">✓</span>
-            </button>
-          </template>
-          <template x-if="kofferBucket && hinreiseBucket">
-            <button
-              class="bucket-toggle-btn"
-              :class="bucketModal && comboStateFor(bucketModal) ? 'bucket-toggle-active' : ''"
-              @click="comboModalToggle()">
-              <span x-text="bucketModal && comboStateFor(bucketModal) === 'hinreise' ? hinreiseBucket.icon : kofferBucket.icon"></span>
-              <span>Koffer/Hinreise</span>
-              <span class="bucket-toggle-check" x-show="bucketModal && comboStateFor(bucketModal)">✓</span>
             </button>
           </template>
           <button class="btn-secondary" @click="closeBucketModal()">Done</button>

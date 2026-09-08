@@ -44,13 +44,30 @@ Alpine.data('checklist', () => ({
     return this.catalog.find((c) => c.id === itemId);
   },
 
+  get kofferBucket() {
+    return this.buckets.find((bucket) => bucket.name === 'Koffer');
+  },
+
+  get hinreiseBucket() {
+    return this.buckets.find((bucket) => bucket.name === 'Hinreise');
+  },
+
   isChecked(entry, bucketId) {
     return !!entry.checked?.[bucketId];
   },
 
+  // An item counts as "in" a bucket either via bucketIds, or via the
+  // Koffer/Hinreise combo toggle on Prep (which is tracked separately).
+  isInBucket(entry, bucketId) {
+    if (entry.bucketIds?.includes(bucketId)) return true;
+    if (entry.comboSide === 'koffer' && bucketId === this.kofferBucket?.id) return true;
+    if (entry.comboSide === 'hinreise' && bucketId === this.hinreiseBucket?.id) return true;
+    return false;
+  },
+
   itemsForBucket(bucketId) {
     const rows = (this.itemDoc?.items || [])
-      .filter((entry) => !entry.excluded && entry.bucketIds?.includes(bucketId))
+      .filter((entry) => !entry.excluded && this.isInBucket(entry, bucketId))
       .map((entry) => ({ entry, catalogItem: this.catalogFor(entry.itemId) }))
       .filter((row) => !!row.catalogItem);
 

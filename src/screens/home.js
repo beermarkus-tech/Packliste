@@ -228,7 +228,7 @@ export function renderHome(container) {
           <button @click="createBlank()">Start blank</button>
 
           <template x-if="creating === 'trip'">
-            <div>
+            <div class="modal-subgroup">
               <p class="screen-placeholder" x-show="templates.length === 0">No templates to copy from yet.</p>
               <template x-for="tpl in templates" :key="tpl.id">
                 <button @click="createFromTemplate(tpl.id, tpl.name)" x-text="'From: ' + tpl.name"></button>
@@ -237,7 +237,7 @@ export function renderHome(container) {
           </template>
 
           <template x-if="creating === 'template'">
-            <div>
+            <div class="modal-subgroup">
               <p class="screen-placeholder" x-show="templates.length === 0">No templates to duplicate yet.</p>
               <template x-for="tpl in templates" :key="tpl.id">
                 <button @click="duplicateIntoNewTemplate(tpl.id, tpl.name)" x-text="'Duplicate: ' + tpl.name"></button>

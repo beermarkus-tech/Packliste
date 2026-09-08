@@ -10,6 +10,7 @@
   --color-text: #1F2937;
   --color-text-secondary: #6B7280;
   --color-border: #E5E7EB;
+  --color-combo: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
 
   --nav-height: 60px;
   --rail-width: 88px;
@@ -223,8 +224,10 @@ body {
   cursor: pointer;
 }
 
-.modal-sheet button + button {
-  margin-top: 8px;
+.modal-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .modal-sheet button.danger {
@@ -492,8 +495,8 @@ body {
 }
 
 .chip-mini-combo {
-  background: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
+  background: var(--color-combo);
+  border-color: var(--color-combo);
   cursor: pointer;
 }
 
@@ -501,6 +504,11 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.modal-sheet button.bucket-toggle-combo {
+  background: var(--color-combo);
+  border-color: var(--color-combo);
 }
 
 .bucket-toggle-btn .bucket-toggle-check {
