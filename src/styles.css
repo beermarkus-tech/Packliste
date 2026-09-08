@@ -415,6 +415,12 @@ body {
   color: white;
 }
 
+.filter-chip-percent {
+  margin-left: 2px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
 .item-list {
   display: flex;
   flex-direction: column;

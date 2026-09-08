@@ -93,6 +93,14 @@ Alpine.data('checklist', () => ({
     return rows.length > 0 && rows.every((row) => this.isChecked(row.entry, bucketId));
   },
 
+  // null for an empty bucket — nothing to show a percentage of.
+  percentFor(bucketId) {
+    const rows = this.itemsForBucket(bucketId);
+    if (rows.length === 0) return null;
+    const done = rows.filter((row) => this.isChecked(row.entry, bucketId)).length;
+    return Math.round((done / rows.length) * 100);
+  },
+
   async toggleChecked(entry, bucketId) {
     const items = this.itemDoc?.items || [];
     const next = items.map((e) => {
@@ -134,6 +142,7 @@ export function renderChecklist(container) {
             @click="selectBucket(bucket.id)">
             <span x-text="bucket.icon"></span>
             <span x-text="bucket.name"></span>
+            <span class="filter-chip-percent" x-show="percentFor(bucket.id) !== null" x-text="percentFor(bucket.id) + '%'"></span>
           </button>
         </template>
       </div>
