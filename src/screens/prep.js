@@ -106,6 +106,46 @@ Alpine.data('prep', () => ({
     return this.buckets.filter((bucket) => ids.includes(bucket.id));
   },
 
+  get kofferBucket() {
+    return this.buckets.find((bucket) => bucket.name === 'Koffer');
+  },
+
+  get hinreiseBucket() {
+    return this.buckets.find((bucket) => bucket.name === 'Hinreise');
+  },
+
+  // 'koffer' | 'hinreise' | null — null when neither or both are assigned,
+  // in which case they fall back to rendering as two plain chips.
+  comboStateFor(catalogItem) {
+    const koffer = this.kofferBucket;
+    const hinreise = this.hinreiseBucket;
+    if (!koffer || !hinreise) return null;
+    const hasKoffer = this.isAssigned(catalogItem, koffer.id);
+    const hasHinreise = this.isAssigned(catalogItem, hinreise.id);
+    if (hasKoffer === hasHinreise) return null;
+    return hasKoffer ? 'koffer' : 'hinreise';
+  },
+
+  otherAssignedBuckets(catalogItem) {
+    const combo = this.comboStateFor(catalogItem);
+    if (!combo) return this.assignedBuckets(catalogItem);
+    const excludeIds = new Set([this.kofferBucket?.id, this.hinreiseBucket?.id]);
+    return this.assignedBuckets(catalogItem).filter((bucket) => !excludeIds.has(bucket.id));
+  },
+
+  async toggleComboBucket(catalogItem) {
+    const combo = this.comboStateFor(catalogItem);
+    if (!combo) return;
+    const fromId = combo === 'koffer' ? this.kofferBucket.id : this.hinreiseBucket.id;
+    const toId = combo === 'koffer' ? this.hinreiseBucket.id : this.kofferBucket.id;
+    const items = this.itemDoc?.items || [];
+    const existing = findEntry(items, catalogItem.id);
+    const nextBucketIds = (existing?.bucketIds || []).filter((id) => id !== fromId);
+    nextBucketIds.push(toId);
+    const next = upsertEntry(items, catalogItem.id, { bucketIds: nextBucketIds }, catalogItem);
+    await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
+  },
+
   isExcluded(catalogItem) {
     return this.entryFor(catalogItem.id)?.excluded === true;
   },
@@ -257,10 +297,24 @@ export function renderPrep(container) {
               <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
             </span>
             <span class="assigned-chips" @click="openBucketModal(item)">
-              <template x-for="bucket in assignedBuckets(item)" :key="bucket.id">
+              <template x-for="bucket in otherAssignedBuckets(item)" :key="bucket.id">
                 <span class="chip-mini" :title="bucket.name" x-text="bucket.icon"></span>
               </template>
-              <span class="chip-mini chip-mini-empty" x-show="assignedBuckets(item).length === 0">+</span>
+              <span
+                class="chip-mini chip-mini-empty"
+                x-show="comboStateFor(item) && otherAssignedBuckets(item).length === 0"
+              >+</span>
+              <span
+                class="chip-mini chip-mini-combo"
+                x-show="comboStateFor(item)"
+                :title="comboStateFor(item) === 'koffer' ? 'Koffer' : 'Hinreise'"
+                @click.stop="toggleComboBucket(item)"
+                x-text="comboStateFor(item) === 'koffer' ? kofferBucket?.icon : hinreiseBucket?.icon"
+              ></span>
+              <span
+                class="chip-mini chip-mini-empty"
+                x-show="!comboStateFor(item) && assignedBuckets(item).length === 0"
+              >+</span>
             </span>
           </div>
         </template>

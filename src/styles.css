@@ -491,6 +491,12 @@ body {
   font-size: 18px;
 }
 
+.chip-mini-combo {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  cursor: pointer;
+}
+
 .bucket-toggle-btn {
   display: flex;
   align-items: center;
