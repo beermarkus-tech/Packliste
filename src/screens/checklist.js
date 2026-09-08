@@ -71,10 +71,10 @@ Alpine.data('checklist', () => ({
       .map((entry) => ({ entry, catalogItem: this.catalogFor(entry.itemId) }))
       .filter((row) => !!row.catalogItem);
 
+    // Flat alphabetical order — Checklist shows no category headers, so
+    // grouping by category here would make the order look arbitrary.
+    // Checked items sink to the bottom of the whole list, not per-category.
     return rows.sort((a, b) => {
-      if (a.catalogItem.category !== b.catalogItem.category) {
-        return a.catalogItem.category.localeCompare(b.catalogItem.category, 'de');
-      }
       const checkedA = this.isChecked(a.entry, bucketId);
       const checkedB = this.isChecked(b.entry, bucketId);
       if (checkedA !== checkedB) return checkedA ? 1 : -1;
