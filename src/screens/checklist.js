@@ -88,6 +88,11 @@ Alpine.data('checklist', () => ({
     return `${done}/${rows.length}`;
   },
 
+  isBucketComplete(bucketId) {
+    const rows = this.itemsForBucket(bucketId);
+    return rows.length > 0 && rows.every((row) => this.isChecked(row.entry, bucketId));
+  },
+
   async toggleChecked(entry, bucketId) {
     const items = this.itemDoc?.items || [];
     const next = items.map((e) => {
@@ -124,8 +129,8 @@ export function renderChecklist(container) {
       <div class="bucket-tabs">
         <template x-for="bucket in buckets" :key="bucket.id">
           <button
-            class="bucket-tab"
-            :class="activeBucketId === bucket.id ? 'bucket-tab-active' : ''"
+            class="filter-chip"
+            :class="(activeBucketId === bucket.id ? 'filter-chip-active ' : '') + (isBucketComplete(bucket.id) ? 'filter-chip-complete' : '')"
             @click="selectBucket(bucket.id)">
             <span x-text="bucket.icon"></span>
             <span x-text="bucket.name"></span>

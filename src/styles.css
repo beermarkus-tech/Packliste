@@ -11,6 +11,7 @@
   --color-text-secondary: #6B7280;
   --color-border: #E5E7EB;
   --color-combo: color-mix(in srgb, var(--color-accent) 45%, var(--color-surface));
+  --color-complete: color-mix(in srgb, var(--color-success) 40%, var(--color-surface));
 
   --nav-height: 60px;
   --rail-width: 88px;
@@ -389,6 +390,17 @@ body {
   color: white;
 }
 
+.filter-chip-complete {
+  background: var(--color-complete);
+  border-color: var(--color-complete);
+}
+
+.filter-chip-complete.filter-chip-active {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: white;
+}
+
 .item-list {
   display: flex;
   flex-direction: column;
@@ -551,27 +563,6 @@ body {
   overflow-x: auto;
   padding: 16px 0 8px;
   margin-bottom: 8px;
-}
-
-.bucket-tab {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--touch-target);
-  padding: 0 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.bucket-tab-active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
 }
 
 .bucket-panel {
