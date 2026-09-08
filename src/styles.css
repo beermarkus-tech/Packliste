@@ -78,7 +78,7 @@ body {
 .app-main {
   flex: 1;
   padding: 16px;
-  padding-bottom: calc(var(--nav-height) + 16px);
+  padding-bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 .screen h2 {
