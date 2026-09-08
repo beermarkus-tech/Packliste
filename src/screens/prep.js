@@ -11,6 +11,8 @@ function findEntry(items, itemId) {
   return items.find((entry) => entry.itemId === itemId);
 }
 
+const LONG_PRESS_MS = 500;
+
 function upsertEntry(items, itemId, patch, catalogItem) {
   const next = items.map((entry) => ({ ...entry, bucketIds: [...entry.bucketIds] }));
   const existing = next.find((entry) => entry.itemId === itemId);
@@ -34,6 +36,8 @@ Alpine.data('prep', () => ({
   buckets: [],
   expanded: {},
   addingItem: false,
+  quantityModal: null, // catalog item currently being edited, or null
+  pressTimer: null,
 
   init() {
     if (!this.currentItem) return;
@@ -118,6 +122,21 @@ Alpine.data('prep', () => ({
     await this.persist(next).catch((err) => console.error('Failed to save quantity', err));
   },
 
+  startItemPress(catalogItem) {
+    clearTimeout(this.pressTimer);
+    this.pressTimer = setTimeout(() => {
+      this.quantityModal = catalogItem;
+    }, LONG_PRESS_MS);
+  },
+
+  cancelItemPress() {
+    clearTimeout(this.pressTimer);
+  },
+
+  closeQuantityModal() {
+    this.quantityModal = null;
+  },
+
   get isTripWithTemplate() {
     return this.currentItem?.type === 'trip' && !!this.itemDoc?.sourceTemplateId;
   },
@@ -199,14 +218,13 @@ export function renderPrep(container) {
           <div class="category-items" x-show="isExpanded(group.category)">
             <template x-for="item in group.items" :key="item.id">
               <div class="item-row">
-                <span class="item-name">
+                <span class="item-name"
+                      @touchstart="startItemPress(item)" @touchend="cancelItemPress()" @touchmove="cancelItemPress()"
+                      @mousedown="startItemPress(item)" @mouseup="cancelItemPress()" @mouseleave="cancelItemPress()"
+                      @contextmenu.prevent>
                   <span x-text="item.icon"></span>
                   <span x-text="item.name"></span>
-                </span>
-                <span class="qty-stepper">
-                  <button class="qty-btn" @click="changeQuantity(item, -1)">−</button>
-                  <span class="qty-value" x-text="quantityFor(item)"></span>
-                  <button class="qty-btn" @click="changeQuantity(item, 1)">+</button>
+                  <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
                 </span>
                 <span class="chip-strip">
                   <template x-for="bucket in buckets" :key="bucket.id">
@@ -231,6 +249,18 @@ export function renderPrep(container) {
           <p class="screen-placeholder">You'll be asked for a name, category, and icon.</p>
           <button @click="submitNewItem()">Continue</button>
           <button class="btn-secondary" @click="closeAddItem()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="modal-overlay" x-show="quantityModal" x-cloak @click.self="closeQuantityModal()">
+        <div class="modal-sheet">
+          <h3 x-text="quantityModal ? quantityModal.icon + ' ' + quantityModal.name : ''"></h3>
+          <span class="qty-stepper qty-stepper-modal">
+            <button class="qty-btn" @click="changeQuantity(quantityModal, -1)">−</button>
+            <span class="qty-value" x-text="quantityModal ? quantityFor(quantityModal) : ''"></span>
+            <button class="qty-btn" @click="changeQuantity(quantityModal, 1)">+</button>
+          </span>
+          <button class="btn-secondary" @click="closeQuantityModal()">Done</button>
         </div>
       </div>
     </div>

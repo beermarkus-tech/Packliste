@@ -367,6 +367,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.qty-badge {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .qty-stepper {
@@ -374,6 +384,11 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.qty-stepper-modal {
+  justify-content: center;
+  padding: 8px 0;
 }
 
 .qty-btn {
