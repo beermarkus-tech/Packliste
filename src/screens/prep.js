@@ -35,6 +35,10 @@ Alpine.data('prep', () => ({
   selectedCategories: [],
   comboFilterActive: false,
   addingItem: false,
+  newItemIcon: '📦',
+  newItemName: '',
+  newItemCategory: '',
+  newItemNewCategory: '',
   quantityModal: null, // catalog item currently being edited, or null
   bucketModal: null, // catalog item currently being edited, or null
 
@@ -254,6 +258,10 @@ Alpine.data('prep', () => ({
 
   openAddItem() {
     this.addingItem = true;
+    this.newItemIcon = '📦';
+    this.newItemName = '';
+    this.newItemCategory = this.categoryNames[0] || '__new__';
+    this.newItemNewCategory = '';
   },
 
   closeAddItem() {
@@ -261,21 +269,17 @@ Alpine.data('prep', () => ({
   },
 
   async submitNewItem() {
-    const name = prompt('Item name');
+    const name = this.newItemName.trim();
     if (!name) return;
-    const existingCategories = [...new Set(this.catalog.map((i) => i.category))];
-    const category = prompt(
-      `Category (existing: ${existingCategories.join(', ')})`,
-      existingCategories[0] || ''
-    );
+    const category =
+      this.newItemCategory === '__new__' ? this.newItemNewCategory.trim() : this.newItemCategory;
     if (!category) return;
-    const icon = prompt('Icon (a single emoji)', '📦') || '📦';
+    const icon = this.newItemIcon.trim() || '📦';
     try {
       await createCatalogItem({ category, name, icon, defaultQuantity: 1 });
+      this.closeAddItem();
     } catch (err) {
       alert(`Couldn't add item: ${err.message}`);
-    } finally {
-      this.closeAddItem();
     }
   },
 }));
@@ -356,8 +360,22 @@ export function renderPrep(container) {
       <div class="modal-overlay" x-show="addingItem" x-cloak @click.self="closeAddItem()">
         <div class="modal-sheet">
           <h3>Add catalog item</h3>
-          <p class="screen-placeholder">You'll be asked for a name, category, and icon.</p>
-          <button @click="submitNewItem()">Continue</button>
+          <input type="text" class="text-input" x-model="newItemIcon" placeholder="Icon" maxlength="4" />
+          <input type="text" class="text-input" x-model="newItemName" placeholder="Item name" autofocus />
+          <select class="text-input" x-model="newItemCategory">
+            <template x-for="cat in categoryNames" :key="cat">
+              <option :value="cat" x-text="cat"></option>
+            </template>
+            <option value="__new__">+ New category…</option>
+          </select>
+          <input
+            type="text"
+            class="text-input"
+            x-show="newItemCategory === '__new__'"
+            x-model="newItemNewCategory"
+            placeholder="New category name"
+          />
+          <button @click="submitNewItem()">Add</button>
           <button class="btn-secondary" @click="closeAddItem()">Cancel</button>
         </div>
       </div>
