@@ -372,6 +372,7 @@ export function renderPrep(container) {
         <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
       </div>
 
+      <div class="item-list-card">
       <div class="item-list">
         <template x-for="item in filteredItems" :key="item.id">
           <div class="item-row" :class="isExcluded(item) ? 'item-row-excluded' : ''">
@@ -402,6 +403,7 @@ export function renderPrep(container) {
             </span>
           </div>
         </template>
+      </div>
       </div>
 
       <div class="modal-overlay" x-show="addingItem" x-cloak @click.self="closeAddItem()">

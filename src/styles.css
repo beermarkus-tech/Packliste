@@ -611,13 +611,21 @@ body {
 }
 
 @media (min-width: 768px) {
+  .item-list-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
   .item-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0 24px;
+    display: block;
+    column-count: 3;
+    column-gap: 24px;
   }
 
   .item-row {
+    break-inside: avoid;
     flex-wrap: nowrap;
   }
 }
