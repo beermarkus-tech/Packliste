@@ -453,6 +453,13 @@ body {
   color: white;
 }
 
+.filter-chip-hidden {
+  background: var(--color-border);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
 .filter-chip-percent {
   margin-left: 2px;
   opacity: 0.75;
@@ -604,12 +611,14 @@ body {
 }
 
 @media (min-width: 768px) {
-  .item-row {
-    flex-wrap: nowrap;
+  .item-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 24px;
   }
 
-  .item-title {
-    min-width: 200px;
+  .item-row {
+    flex-wrap: nowrap;
   }
 }
 
@@ -703,10 +712,6 @@ body {
 }
 
 @media (min-width: 768px) {
-  .bucket-tabs {
-    display: none;
-  }
-
   .bucket-panels {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -720,5 +725,9 @@ body {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 16px;
+  }
+
+  .bucket-panel-hidden {
+    display: none;
   }
 }

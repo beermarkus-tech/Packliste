@@ -12,6 +12,7 @@ Alpine.data('checklist', () => ({
   catalog: [],
   buckets: [],
   activeBucketId: null,
+  hiddenBucketIds: [],
 
   init() {
     if (!this.currentItem || this.currentItem.type !== 'trip') return;
@@ -38,6 +39,34 @@ Alpine.data('checklist', () => ({
 
   selectBucket(bucketId) {
     this.activeBucketId = bucketId;
+  },
+
+  // Tablet shows every bucket's checklist at once as a grid of panels,
+  // so a chip click there toggles that one panel's visibility instead
+  // of switching which single panel is shown (the phone behavior).
+  get isTabletLayout() {
+    return window.matchMedia('(min-width: 768px)').matches;
+  },
+
+  onBucketChipClick(bucketId) {
+    if (this.isTabletLayout) {
+      this.toggleBucketHidden(bucketId);
+    } else {
+      this.selectBucket(bucketId);
+    }
+  },
+
+  toggleBucketHidden(bucketId) {
+    const idx = this.hiddenBucketIds.indexOf(bucketId);
+    if (idx === -1) {
+      this.hiddenBucketIds.push(bucketId);
+    } else {
+      this.hiddenBucketIds.splice(idx, 1);
+    }
+  },
+
+  isBucketHidden(bucketId) {
+    return this.hiddenBucketIds.includes(bucketId);
   },
 
   catalogFor(itemId) {
@@ -138,8 +167,8 @@ export function renderChecklist(container) {
         <template x-for="bucket in buckets" :key="bucket.id">
           <button
             class="filter-chip"
-            :class="(activeBucketId === bucket.id ? 'filter-chip-active ' : '') + (isBucketComplete(bucket.id) ? 'filter-chip-complete' : '')"
-            @click="selectBucket(bucket.id)">
+            :class="(!isTabletLayout && activeBucketId === bucket.id ? 'filter-chip-active ' : '') + (isBucketHidden(bucket.id) ? 'filter-chip-hidden ' : (isBucketComplete(bucket.id) ? 'filter-chip-complete' : ''))"
+            @click="onBucketChipClick(bucket.id)">
             <span x-text="bucket.icon"></span>
             <span x-text="bucket.name"></span>
             <span class="filter-chip-percent" x-show="percentFor(bucket.id) !== null" x-text="percentFor(bucket.id) + '%'"></span>
@@ -149,7 +178,7 @@ export function renderChecklist(container) {
 
       <div class="bucket-panels">
         <template x-for="bucket in buckets" :key="bucket.id">
-          <div class="bucket-panel" :class="activeBucketId === bucket.id ? 'bucket-panel-active' : ''">
+          <div class="bucket-panel" :class="(activeBucketId === bucket.id ? 'bucket-panel-active ' : '') + (isBucketHidden(bucket.id) ? 'bucket-panel-hidden' : '')">
             <div class="bucket-panel-header">
               <span x-text="bucket.icon + ' ' + bucket.name"></span>
               <span class="bucket-progress" x-text="progressFor(bucket.id) + ' ' + (bucket.type === 'tasklist' ? 'done' : 'packed')"></span>
