@@ -2,7 +2,7 @@ import Alpine from 'alpinejs';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 import { getCurrentItem } from '../lib/store.js';
-import { watchCatalog, createCatalogItem } from '../data/catalog.js';
+import { watchCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '../data/catalog.js';
 import { watchBuckets } from '../data/buckets.js';
 import { updateTemplateItems } from '../data/templates.js';
 import { updateTripItems } from '../data/trips.js';
@@ -41,6 +41,11 @@ Alpine.data('prep', () => ({
   newItemNewCategory: '',
   quantityModal: null, // catalog item currently being edited, or null
   bucketModal: null, // catalog item currently being edited, or null
+  editItemModal: null, // catalog item currently being edited, or null
+  editItemIcon: '',
+  editItemName: '',
+  editItemCategory: '',
+  editItemNewCategory: '',
 
   init() {
     if (!this.currentItem) return;
@@ -226,6 +231,48 @@ Alpine.data('prep', () => ({
     this.quantityModal = null;
   },
 
+  openEditItem() {
+    if (!this.quantityModal) return;
+    const item = this.quantityModal;
+    this.closeQuantityModal();
+    this.editItemModal = item;
+    this.editItemIcon = item.icon;
+    this.editItemName = item.name;
+    this.editItemCategory = item.category;
+    this.editItemNewCategory = '';
+  },
+
+  closeEditItem() {
+    this.editItemModal = null;
+  },
+
+  async submitEditItem() {
+    if (!this.editItemModal) return;
+    const name = this.editItemName.trim();
+    if (!name) return;
+    const category =
+      this.editItemCategory === '__new__' ? this.editItemNewCategory.trim() : this.editItemCategory;
+    if (!category) return;
+    const icon = this.editItemIcon.trim() || '📦';
+    try {
+      await updateCatalogItem(this.editItemModal.id, { name, category, icon });
+      this.closeEditItem();
+    } catch (err) {
+      alert(`Couldn't save changes: ${err.message}`);
+    }
+  },
+
+  async deleteEditItem() {
+    if (!this.editItemModal) return;
+    if (!confirm(`Delete "${this.editItemModal.name}" from the catalog? This can't be undone.`)) return;
+    try {
+      await deleteCatalogItem(this.editItemModal.id);
+      this.closeEditItem();
+    } catch (err) {
+      alert(`Couldn't delete item: ${err.message}`);
+    }
+  },
+
   openBucketModal(catalogItem) {
     this.bucketModal = catalogItem;
   },
@@ -381,14 +428,41 @@ export function renderPrep(container) {
       </div>
 
       <div class="modal-overlay" x-show="quantityModal" x-cloak @click.self="closeQuantityModal()">
-        <div class="modal-sheet">
-          <h3 x-text="quantityModal ? quantityModal.icon + ' ' + quantityModal.name : ''"></h3>
+        <div class="modal-sheet modal-sheet-centered">
+          <div class="qty-modal-header">
+            <h3 x-text="quantityModal ? quantityModal.icon + ' ' + quantityModal.name : ''"></h3>
+            <button class="modal-icon-btn" @click="openEditItem()" title="Edit item">✏️</button>
+          </div>
           <span class="qty-stepper qty-stepper-modal">
             <button class="qty-btn" @click="changeQuantity(quantityModal, -1)">−</button>
             <span class="qty-value" x-text="quantityModal ? quantityFor(quantityModal) : ''"></span>
             <button class="qty-btn" @click="changeQuantity(quantityModal, 1)">+</button>
           </span>
           <button class="btn-secondary" @click="closeQuantityModal()">Done</button>
+        </div>
+      </div>
+
+      <div class="modal-overlay" x-show="editItemModal" x-cloak @click.self="closeEditItem()">
+        <div class="modal-sheet">
+          <h3>Edit item</h3>
+          <input type="text" class="text-input" x-model="editItemIcon" placeholder="Icon" maxlength="4" />
+          <input type="text" class="text-input" x-model="editItemName" placeholder="Item name" />
+          <select class="text-input" x-model="editItemCategory">
+            <template x-for="cat in categoryNames" :key="cat">
+              <option :value="cat" x-text="cat"></option>
+            </template>
+            <option value="__new__">+ New category…</option>
+          </select>
+          <input
+            type="text"
+            class="text-input"
+            x-show="editItemCategory === '__new__'"
+            x-model="editItemNewCategory"
+            placeholder="New category name"
+          />
+          <button @click="submitEditItem()">Save</button>
+          <button class="danger" @click="deleteEditItem()">Delete item</button>
+          <button class="btn-secondary" @click="closeEditItem()">Cancel</button>
         </div>
       </div>
 
