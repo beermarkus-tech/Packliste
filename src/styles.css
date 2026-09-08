@@ -429,30 +429,55 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.chip-strip {
-  flex: 1 1 auto;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  min-width: 0;
-}
-
-.chip {
+.assigned-chips {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 18px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+  padding: 0 4px;
+  margin-left: auto;
   cursor: pointer;
 }
 
-.chip-active {
+.chip-mini {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
   background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.chip-mini-empty {
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
+
+.bucket-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bucket-toggle-btn .bucket-toggle-check {
+  margin-left: auto;
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+.bucket-toggle-active {
   border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 @media (min-width: 768px) {
@@ -462,10 +487,5 @@ body {
 
   .item-name {
     min-width: 200px;
-  }
-
-  .chip-strip {
-    overflow-x: visible;
-    flex-wrap: nowrap;
   }
 }

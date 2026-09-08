@@ -11,8 +11,6 @@ function findEntry(items, itemId) {
   return items.find((entry) => entry.itemId === itemId);
 }
 
-const LONG_PRESS_MS = 500;
-
 function upsertEntry(items, itemId, patch, catalogItem) {
   const next = items.map((entry) => ({ ...entry, bucketIds: [...entry.bucketIds] }));
   const existing = next.find((entry) => entry.itemId === itemId);
@@ -37,7 +35,7 @@ Alpine.data('prep', () => ({
   expanded: {},
   addingItem: false,
   quantityModal: null, // catalog item currently being edited, or null
-  pressTimer: null,
+  bucketModal: null, // catalog item currently being edited, or null
 
   init() {
     if (!this.currentItem) return;
@@ -95,6 +93,11 @@ Alpine.data('prep', () => ({
     return !!this.entryFor(catalogItem.id)?.bucketIds?.includes(bucketId);
   },
 
+  assignedBuckets(catalogItem) {
+    const ids = this.entryFor(catalogItem.id)?.bucketIds || [];
+    return this.buckets.filter((bucket) => ids.includes(bucket.id));
+  },
+
   async persist(items) {
     if (this.currentItem.type === 'template') {
       await updateTemplateItems(this.currentItem.id, items);
@@ -122,19 +125,20 @@ Alpine.data('prep', () => ({
     await this.persist(next).catch((err) => console.error('Failed to save quantity', err));
   },
 
-  startItemPress(catalogItem) {
-    clearTimeout(this.pressTimer);
-    this.pressTimer = setTimeout(() => {
-      this.quantityModal = catalogItem;
-    }, LONG_PRESS_MS);
-  },
-
-  cancelItemPress() {
-    clearTimeout(this.pressTimer);
+  openQuantityModal(catalogItem) {
+    this.quantityModal = catalogItem;
   },
 
   closeQuantityModal() {
     this.quantityModal = null;
+  },
+
+  openBucketModal(catalogItem) {
+    this.bucketModal = catalogItem;
+  },
+
+  closeBucketModal() {
+    this.bucketModal = null;
   },
 
   get isTripWithTemplate() {
@@ -218,24 +222,16 @@ export function renderPrep(container) {
           <div class="category-items" x-show="isExpanded(group.category)">
             <template x-for="item in group.items" :key="item.id">
               <div class="item-row">
-                <span class="item-name"
-                      @touchstart="startItemPress(item)" @touchend="cancelItemPress()" @touchmove="cancelItemPress()"
-                      @mousedown="startItemPress(item)" @mouseup="cancelItemPress()" @mouseleave="cancelItemPress()"
-                      @contextmenu.prevent>
+                <span class="item-name" @click="openQuantityModal(item)">
                   <span x-text="item.icon"></span>
                   <span x-text="item.name"></span>
                   <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
                 </span>
-                <span class="chip-strip">
-                  <template x-for="bucket in buckets" :key="bucket.id">
-                    <button
-                      class="chip"
-                      :class="isAssigned(item, bucket.id) ? 'chip-active' : ''"
-                      :title="bucket.name"
-                      @click="toggleBucket(item, bucket.id)"
-                      x-text="bucket.icon"
-                    ></button>
+                <span class="assigned-chips" @click="openBucketModal(item)">
+                  <template x-for="bucket in assignedBuckets(item)" :key="bucket.id">
+                    <span class="chip-mini" :title="bucket.name" x-text="bucket.icon"></span>
                   </template>
+                  <span class="chip-mini chip-mini-empty" x-show="assignedBuckets(item).length === 0">+</span>
                 </span>
               </div>
             </template>
@@ -261,6 +257,23 @@ export function renderPrep(container) {
             <button class="qty-btn" @click="changeQuantity(quantityModal, 1)">+</button>
           </span>
           <button class="btn-secondary" @click="closeQuantityModal()">Done</button>
+        </div>
+      </div>
+
+      <div class="modal-overlay" x-show="bucketModal" x-cloak @click.self="closeBucketModal()">
+        <div class="modal-sheet">
+          <h3 x-text="bucketModal ? bucketModal.icon + ' ' + bucketModal.name : ''"></h3>
+          <template x-for="bucket in buckets" :key="bucket.id">
+            <button
+              class="bucket-toggle-btn"
+              :class="bucketModal && isAssigned(bucketModal, bucket.id) ? 'bucket-toggle-active' : ''"
+              @click="toggleBucket(bucketModal, bucket.id)">
+              <span x-text="bucket.icon"></span>
+              <span x-text="bucket.name"></span>
+              <span class="bucket-toggle-check" x-show="bucketModal && isAssigned(bucketModal, bucket.id)">✓</span>
+            </button>
+          </template>
+          <button class="btn-secondary" @click="closeBucketModal()">Done</button>
         </div>
       </div>
     </div>
