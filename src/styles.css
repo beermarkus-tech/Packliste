@@ -358,6 +358,7 @@ body {
 }
 
 .filter-chip {
+  flex: 0 0 auto;
   min-height: 36px;
   padding: 0 14px;
   border: 1px solid var(--color-border);
@@ -365,6 +366,7 @@ body {
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 13px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -559,8 +561,8 @@ body {
 
 .bucket-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
   padding: 16px 0 8px;
   margin-bottom: 8px;
 }
