@@ -408,7 +408,7 @@ body {
   margin-bottom: 16px;
 }
 
-.add-item-tablet-only {
+.header-action-tablet-only {
   display: none;
 }
 
@@ -635,11 +635,11 @@ body {
     flex-wrap: nowrap;
   }
 
-  .add-item-mobile-only {
+  .header-action-mobile-only {
     display: none;
   }
 
-  .add-item-tablet-only {
+  .header-action-tablet-only {
     display: inline-flex;
     align-items: center;
     justify-content: center;

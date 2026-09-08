@@ -35,6 +35,7 @@ Alpine.data('prep', () => ({
   selectedCategories: [],
   comboFilterActive: false,
   hideExcluded: false,
+  sortMode: 'alpha', // 'alpha' | 'symbol'
   addingItem: false,
   newItemIcon: '📦',
   newItemName: '',
@@ -86,8 +87,10 @@ Alpine.data('prep', () => ({
     if (this.hideExcluded) {
       items = items.filter((item) => !this.isExcluded(item));
     }
-    return [...items].sort(
-      (a, b) => a.category.localeCompare(b.category, 'de') || a.name.localeCompare(b.name, 'de')
+    return [...items].sort((a, b) =>
+      this.sortMode === 'symbol'
+        ? a.icon.localeCompare(b.icon) || a.name.localeCompare(b.name, 'de')
+        : a.name.localeCompare(b.name, 'de')
     );
   },
 
@@ -107,6 +110,10 @@ Alpine.data('prep', () => ({
 
   toggleHideExcluded() {
     this.hideExcluded = !this.hideExcluded;
+  },
+
+  toggleSortMode() {
+    this.sortMode = this.sortMode === 'alpha' ? 'symbol' : 'alpha';
   },
 
   get hasActiveFilters() {
@@ -358,7 +365,7 @@ export function renderPrep(container) {
       <div class="prep-header">
         <h2 x-text="itemDoc?.name || '…'"></h2>
         <div class="prep-header-actions">
-          <button class="btn-secondary add-item-mobile-only" @click="openAddItem()">+ Add item to catalog</button>
+          <button class="btn-secondary header-action-mobile-only" @click="openAddItem()">+ Add item to catalog</button>
           <button class="btn-secondary" x-show="isTripWithTemplate" @click="updateTemplateFromTrip()">Update template from this trip</button>
         </div>
       </div>
@@ -370,11 +377,6 @@ export function renderPrep(container) {
           @click="toggleComboFilter()"
           x-show="kofferBucket && hinreiseBucket"
         >🧳✈️ Koffer/Hinreise</button>
-        <button
-          class="filter-chip"
-          :class="hideExcluded ? 'filter-chip-active' : ''"
-          @click="toggleHideExcluded()"
-        >❌ Hide excluded</button>
         <template x-for="category in categoryNames" :key="category">
           <button
             class="filter-chip"
@@ -383,8 +385,18 @@ export function renderPrep(container) {
             x-text="category"
           ></button>
         </template>
+        <button
+          class="filter-chip"
+          :class="hideExcluded ? 'filter-chip-active' : ''"
+          @click="toggleHideExcluded()"
+        >❌ Hide excluded</button>
+        <button
+          class="filter-chip"
+          :class="sortMode === 'symbol' ? 'filter-chip-active' : ''"
+          @click="toggleSortMode()"
+        >🔣 Sort by symbol</button>
         <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
-        <button class="btn-secondary add-item-tablet-only" @click="openAddItem()">+ Add item to catalog</button>
+        <button class="btn-secondary header-action-tablet-only" @click="openAddItem()">+ Add item to catalog</button>
       </div>
 
       <div class="item-list-card">

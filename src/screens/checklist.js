@@ -13,6 +13,7 @@ Alpine.data('checklist', () => ({
   buckets: [],
   activeBucketId: null,
   hiddenBucketIds: [],
+  sortMode: 'alpha', // 'alpha' | 'symbol'
 
   init() {
     if (!this.currentItem || this.currentItem.type !== 'trip') return;
@@ -73,6 +74,10 @@ Alpine.data('checklist', () => ({
     this.hiddenBucketIds = [];
   },
 
+  toggleSortMode() {
+    this.sortMode = this.sortMode === 'alpha' ? 'symbol' : 'alpha';
+  },
+
   async unpackAll() {
     if (!confirm('Uncheck all items across every checklist? This cannot be undone.')) return;
     const items = this.itemDoc?.items || [];
@@ -122,6 +127,12 @@ Alpine.data('checklist', () => ({
       const checkedA = this.isChecked(a.entry, bucketId);
       const checkedB = this.isChecked(b.entry, bucketId);
       if (checkedA !== checkedB) return checkedA ? 1 : -1;
+      if (this.sortMode === 'symbol') {
+        return (
+          a.catalogItem.icon.localeCompare(b.catalogItem.icon) ||
+          a.catalogItem.name.localeCompare(b.catalogItem.name, 'de')
+        );
+      }
       return a.catalogItem.name.localeCompare(b.catalogItem.name, 'de');
     });
   },
@@ -179,7 +190,7 @@ export function renderChecklist(container) {
       <div class="prep-header">
         <h2 x-text="itemDoc?.name || '…'"></h2>
         <div class="prep-header-actions">
-          <button class="btn-secondary" @click="unpackAll()">Unpack all</button>
+          <button class="btn-secondary header-action-mobile-only" @click="unpackAll()">Unpack all</button>
         </div>
       </div>
 
@@ -194,7 +205,13 @@ export function renderChecklist(container) {
             <span class="filter-chip-percent" x-show="percentFor(bucket.id) !== null" x-text="percentFor(bucket.id) + '%'"></span>
           </button>
         </template>
+        <button
+          class="filter-chip"
+          :class="sortMode === 'symbol' ? 'filter-chip-active' : ''"
+          @click="toggleSortMode()"
+        >🔣 Sort by symbol</button>
         <button class="filter-chip filter-chip-reset" x-show="hiddenBucketIds.length > 0" @click="showAllBuckets()">Show all</button>
+        <button class="btn-secondary header-action-tablet-only" @click="unpackAll()">Unpack all</button>
       </div>
 
       <div class="bucket-panels">
