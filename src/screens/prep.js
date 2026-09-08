@@ -106,6 +106,21 @@ Alpine.data('prep', () => ({
     return this.buckets.filter((bucket) => ids.includes(bucket.id));
   },
 
+  isExcluded(catalogItem) {
+    return this.entryFor(catalogItem.id)?.excluded === true;
+  },
+
+  async toggleExcluded(catalogItem) {
+    const items = this.itemDoc?.items || [];
+    const next = upsertEntry(
+      items,
+      catalogItem.id,
+      { excluded: !this.isExcluded(catalogItem) },
+      catalogItem
+    );
+    await this.persist(next).catch((err) => console.error('Failed to save excluded state', err));
+  },
+
   async persist(items) {
     if (this.currentItem.type === 'template') {
       await updateTemplateItems(this.currentItem.id, items);
@@ -235,9 +250,9 @@ export function renderPrep(container) {
 
       <div class="item-list">
         <template x-for="item in filteredItems" :key="item.id">
-          <div class="item-row">
-            <span class="item-name" @click="openQuantityModal(item)">
-              <span x-text="item.icon"></span>
+          <div class="item-row" :class="isExcluded(item) ? 'item-row-excluded' : ''">
+            <span class="item-icon-toggle" @click="toggleExcluded(item)" x-text="isExcluded(item) ? '❌' : item.icon"></span>
+            <span class="item-title" @click="openQuantityModal(item)">
               <span x-text="item.name"></span>
               <span class="qty-badge" x-show="quantityFor(item) !== 1" x-text="'×' + quantityFor(item)"></span>
             </span>

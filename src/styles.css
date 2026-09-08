@@ -388,7 +388,21 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 
-.item-name {
+.item-icon-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  margin-left: -8px;
+  font-size: 18px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.item-title {
   flex: 0 1 auto;
   min-width: 0;
   display: flex;
@@ -400,6 +414,10 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.item-row-excluded {
+  opacity: 0.45;
 }
 
 .qty-badge {
@@ -495,7 +513,7 @@ body {
     flex-wrap: nowrap;
   }
 
-  .item-name {
+  .item-title {
     min-width: 200px;
   }
 }
