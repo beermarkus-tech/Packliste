@@ -35,7 +35,7 @@ Alpine.data('prep', () => ({
   selectedCategories: [],
   comboFilterActive: false,
   hideExcluded: false,
-  sortMode: 'alpha', // 'alpha' | 'symbol'
+  sortMode: 'symbol', // 'alpha' | 'symbol'
   addingItem: false,
   newItemIcon: '📦',
   newItemName: '',
@@ -392,9 +392,9 @@ export function renderPrep(container) {
         >❌ Hide excluded</button>
         <button
           class="filter-chip"
-          :class="sortMode === 'symbol' ? 'filter-chip-active' : ''"
+          :class="sortMode === 'alpha' ? 'filter-chip-active' : ''"
           @click="toggleSortMode()"
-        >🔣 Sort by symbol</button>
+        >🔤 Sort alphabetically</button>
         <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
         <button class="btn-secondary header-action-tablet-only" @click="openAddItem()">+ Add item to catalog</button>
       </div>

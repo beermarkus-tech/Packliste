@@ -655,9 +655,9 @@ body {
 .bucket-tabs {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  padding: 16px 0 8px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 .bucket-panel {

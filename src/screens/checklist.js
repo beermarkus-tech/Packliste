@@ -13,7 +13,7 @@ Alpine.data('checklist', () => ({
   buckets: [],
   activeBucketId: null,
   hiddenBucketIds: [],
-  sortMode: 'alpha', // 'alpha' | 'symbol'
+  sortMode: 'symbol', // 'alpha' | 'symbol'
 
   init() {
     if (!this.currentItem || this.currentItem.type !== 'trip') return;
@@ -207,9 +207,9 @@ export function renderChecklist(container) {
         </template>
         <button
           class="filter-chip"
-          :class="sortMode === 'symbol' ? 'filter-chip-active' : ''"
+          :class="sortMode === 'alpha' ? 'filter-chip-active' : ''"
           @click="toggleSortMode()"
-        >🔣 Sort by symbol</button>
+        >🔤 Sort alphabetically</button>
         <button class="filter-chip filter-chip-reset" x-show="hiddenBucketIds.length > 0" @click="showAllBuckets()">Show all</button>
         <button class="btn-secondary header-action-tablet-only" @click="unpackAll()">Unpack all</button>
       </div>
