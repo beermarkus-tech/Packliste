@@ -50,7 +50,8 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* --- Build badge --- */
@@ -77,8 +78,10 @@ body {
 
 .app-main {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
-  padding-bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom, 0px));
 }
 
 .screen h2 {
@@ -284,15 +287,27 @@ body {
 /* --- Bottom tab bar (phone) --- */
 
 .nav-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex: 0 0 auto;
   min-height: var(--nav-height);
   display: flex;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* A normal flex sibling, not a floating overlay, so it can never be
+   covered by scrolled content — DOM order puts it before .app-main
+   (needed for the tablet left rail), so on phone it's reordered to the
+   visual bottom instead of relying on position:fixed + reserved padding,
+   which proved unreliable across devices' safe-area/viewport handling. */
+@media (max-width: 767px) {
+  .nav-tabs {
+    order: 2;
+  }
+
+  .app-main {
+    order: 1;
+  }
 }
 
 .nav-tab {
@@ -328,10 +343,8 @@ body {
   }
 
   .nav-tabs {
-    position: static;
     flex-direction: column;
     width: var(--rail-width);
-    height: 100vh;
     border-top: none;
     border-right: 1px solid var(--color-border);
     padding-top: 24px;
@@ -342,10 +355,6 @@ body {
     flex: 0 0 auto;
     font-size: 12px;
     padding: 8px 0;
-  }
-
-  .app-main {
-    padding-bottom: 16px;
   }
 }
 

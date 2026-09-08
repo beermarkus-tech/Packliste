@@ -59,26 +59,6 @@ function renderAppShell() {
       button.classList.toggle('active', button.dataset.path === path);
     });
   });
-
-  syncNavBarSpacing(app);
-  const navTabs = app.querySelector('.nav-tabs');
-  new ResizeObserver(() => syncNavBarSpacing(app)).observe(navTabs);
-}
-
-// The bottom tab bar's real rendered height (including whatever the browser
-// actually gives env(safe-area-inset-bottom) on this device — notoriously
-// unreliable cross-platform) is measured directly rather than guessed at in
-// CSS, so scrollable content never ends up hidden underneath it. On tablet
-// the nav becomes a static left rail, so no bottom space is reserved.
-function syncNavBarSpacing(app) {
-  const navTabs = app.querySelector('.nav-tabs');
-  const main = app.querySelector('.app-main');
-  if (!navTabs || !main) return;
-  if (getComputedStyle(navTabs).position !== 'fixed') {
-    main.style.paddingBottom = '';
-    return;
-  }
-  main.style.paddingBottom = `${navTabs.getBoundingClientRect().height + 16}px`;
 }
 
 watchAuthState((user) => {
