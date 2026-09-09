@@ -8,7 +8,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
-import { getTemplate } from './templates.js';
+import { getDatabase } from './database.js';
 
 const tripsRef = collection(db, 'trips');
 
@@ -28,19 +28,39 @@ export async function createTrip({ name, date = null, sourceTemplateId = null, i
   return ref.id;
 }
 
-// A trip is always a copy of the template's items at creation time — never a
+// A trip is always a copy of the database's items at creation time — never a
 // live reference. `checked` starts empty; a missing key just reads as unchecked.
-export async function createTripFromTemplate(templateId, { name, date } = {}) {
-  const template = await getTemplate(templateId);
-  if (!template) throw new Error('Template not found');
-  const items = (template.items || []).map((item) => ({
+// `sourceTemplateId` records that this trip came from the database, so Prep
+// can offer "Update database from this trip" later — the field keeps its
+// original name since existing trips in Firestore already use it.
+export async function createTripFromDatabase({ name, date } = {}) {
+  const database = await getDatabase();
+  if (!database) throw new Error('Database not found');
+  const items = (database.items || []).map((item) => ({
     itemId: item.itemId,
     bucketIds: [...item.bucketIds],
     quantity: item.quantity,
     checked: {},
     ...(item.comboSide ? { comboSide: item.comboSide } : {}),
   }));
-  return createTrip({ name: name || template.name, date, sourceTemplateId: templateId, items });
+  return createTrip({ name: name || database.name, date, sourceTemplateId: database.id, items });
+}
+
+// Starts a new trip as a fresh copy of an existing one: keeps bucket
+// assignments, quantities and excluded state, but resets checked/packed
+// progress since this is a new trip that hasn't been packed yet.
+export async function createTripFromTrip(sourceTripId, { name, date } = {}) {
+  const original = await getTrip(sourceTripId);
+  if (!original) throw new Error('Trip not found');
+  return createTrip({
+    name: name || `${original.name} (Copy)`,
+    date: date ?? null,
+    items: (original.items || []).map((item) => ({
+      ...item,
+      bucketIds: [...item.bucketIds],
+      checked: {},
+    })),
+  });
 }
 
 export async function duplicateTrip(id, { name } = {}) {

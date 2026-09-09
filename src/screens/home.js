@@ -1,17 +1,12 @@
 import Alpine from 'alpinejs';
 import { navigateTo } from '../lib/router.js';
 import { setCurrentItem } from '../lib/store.js';
-import {
-  watchTemplates,
-  createTemplate,
-  duplicateTemplate,
-  renameTemplate,
-  deleteTemplate,
-} from '../data/templates.js';
+import { watchDatabase, createDatabase } from '../data/database.js';
 import {
   watchTrips,
   createTrip,
-  createTripFromTemplate,
+  createTripFromDatabase,
+  createTripFromTrip,
   duplicateTrip,
   renameTrip,
   deleteTrip,
@@ -20,15 +15,15 @@ import {
 const LONG_PRESS_MS = 500;
 
 Alpine.data('home', () => ({
-  templates: [],
+  database: null,
   trips: [],
-  actionSheet: null, // { type, item }
-  creating: null, // 'template' | 'trip'
+  actionSheet: null, // { item }
+  creating: false,
   pressTimer: null,
 
   init() {
-    this._unsubTemplates = watchTemplates((list) => {
-      this.templates = list;
+    this._unsubDatabase = watchDatabase((db) => {
+      this.database = db;
     });
     this._unsubTrips = watchTrips((list) => {
       this.trips = list;
@@ -36,14 +31,14 @@ Alpine.data('home', () => ({
   },
 
   destroy() {
-    this._unsubTemplates?.();
+    this._unsubDatabase?.();
     this._unsubTrips?.();
   },
 
-  startPress(type, item) {
+  startPress(item) {
     clearTimeout(this.pressTimer);
     this.pressTimer = setTimeout(() => {
-      this.actionSheet = { type, item };
+      this.actionSheet = { item };
     }, LONG_PRESS_MS);
   },
 
@@ -56,96 +51,76 @@ Alpine.data('home', () => ({
     navigateTo('prep');
   },
 
+  openDatabase() {
+    if (!this.database) return;
+    this.openItem('template', this.database.id);
+  },
+
+  async bootstrapDatabase() {
+    try {
+      const id = await createDatabase();
+      this.openItem('template', id);
+    } catch (err) {
+      alert(`Couldn't create database: ${err.message}`);
+    }
+  },
+
   closeActionSheet() {
     this.actionSheet = null;
   },
 
   async doOpen() {
-    const { type, item } = this.actionSheet;
+    const { item } = this.actionSheet;
     this.closeActionSheet();
-    this.openItem(type, item.id);
+    this.openItem('trip', item.id);
   },
 
   async doDuplicate() {
-    const { type, item } = this.actionSheet;
+    const { item } = this.actionSheet;
     this.closeActionSheet();
     try {
-      if (type === 'template') {
-        await duplicateTemplate(item.id);
-      } else {
-        await duplicateTrip(item.id);
-      }
+      await duplicateTrip(item.id);
     } catch (err) {
       alert(`Couldn't duplicate: ${err.message}`);
     }
   },
 
   async doRename() {
-    const { type, item } = this.actionSheet;
+    const { item } = this.actionSheet;
     this.closeActionSheet();
     const name = prompt('New name', item.name);
     if (!name) return;
     try {
-      if (type === 'template') {
-        await renameTemplate(item.id, name);
-      } else {
-        await renameTrip(item.id, name);
-      }
+      await renameTrip(item.id, name);
     } catch (err) {
       alert(`Couldn't rename: ${err.message}`);
     }
   },
 
   async doDelete() {
-    const { type, item } = this.actionSheet;
+    const { item } = this.actionSheet;
     this.closeActionSheet();
     if (!confirm(`Delete "${item.name}"? This can't be undone.`)) return;
     try {
-      if (type === 'template') {
-        await deleteTemplate(item.id);
-      } else {
-        await deleteTrip(item.id);
-      }
+      await deleteTrip(item.id);
     } catch (err) {
       alert(`Couldn't delete: ${err.message}`);
     }
   },
 
-  openNewTemplate() {
-    this.creating = 'template';
-  },
-
   openNewTrip() {
-    this.creating = 'trip';
+    this.creating = true;
   },
 
   closeCreating() {
-    this.creating = null;
+    this.creating = false;
   },
 
   async createBlank() {
-    const name = prompt(`Name your new ${this.creating}`);
+    const name = prompt('Name your new trip');
     if (!name) return;
     try {
-      let id;
-      if (this.creating === 'template') {
-        id = await createTemplate({ name, items: [] });
-        this.closeCreating();
-        this.openItem('template', id);
-      } else {
-        id = await createTrip({ name, items: [] });
-        this.closeCreating();
-        this.openItem('trip', id);
-      }
-    } catch (err) {
-      alert(`Couldn't create: ${err.message}`);
-    }
-  },
-
-  async createFromTemplate(templateId, templateName) {
-    const name = prompt('Name this trip', templateName) || templateName;
-    try {
-      const id = await createTripFromTemplate(templateId, { name });
+      const id = await createTrip({ name, items: [] });
       this.closeCreating();
       this.openItem('trip', id);
     } catch (err) {
@@ -153,15 +128,27 @@ Alpine.data('home', () => ({
     }
   },
 
-  async duplicateIntoNewTemplate(templateId, templateName) {
-    const name = prompt('Name this template', `${templateName} (Copy)`);
+  async createFromDatabase() {
+    const name = prompt('Name this trip', this.database?.name || 'Trip');
     if (!name) return;
     try {
-      const id = await duplicateTemplate(templateId, { name });
+      const id = await createTripFromDatabase({ name });
       this.closeCreating();
-      this.openItem('template', id);
+      this.openItem('trip', id);
     } catch (err) {
-      alert(`Couldn't create template: ${err.message}`);
+      alert(`Couldn't create trip: ${err.message}`);
+    }
+  },
+
+  async createFromExistingTrip(tripId, tripName) {
+    const name = prompt('Name this trip', `${tripName} (Copy)`);
+    if (!name) return;
+    try {
+      const id = await createTripFromTrip(tripId, { name });
+      this.closeCreating();
+      this.openItem('trip', id);
+    } catch (err) {
+      alert(`Couldn't create trip: ${err.message}`);
     }
   },
 }));
@@ -173,21 +160,15 @@ export function renderHome(container) {
       <div class="home-lists">
         <section class="home-list">
           <div class="home-list-header">
-            <h3>Templates</h3>
-            <button class="btn-secondary" @click="openNewTemplate()">+ New Template</button>
+            <h3>Database</h3>
           </div>
-          <p class="screen-placeholder" x-show="templates.length === 0">No templates yet.</p>
-          <ul class="card-list">
-            <template x-for="tpl in templates" :key="tpl.id">
-              <li class="card-item"
-                  @click="openItem('template', tpl.id)"
-                  @touchstart="startPress('template', tpl)" @touchend="cancelPress()" @touchmove="cancelPress()"
-                  @mousedown="startPress('template', tpl)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
-                  @contextmenu.prevent>
-                <span x-text="tpl.name"></span>
-              </li>
-            </template>
+          <p class="screen-placeholder" x-show="!database">No database yet.</p>
+          <ul class="card-list" x-show="database">
+            <li class="card-item" @click="openDatabase()">
+              <span x-text="database?.name"></span>
+            </li>
           </ul>
+          <button class="btn-secondary" x-show="!database" @click="bootstrapDatabase()">+ Create database</button>
         </section>
 
         <section class="home-list">
@@ -200,8 +181,8 @@ export function renderHome(container) {
             <template x-for="trip in trips" :key="trip.id">
               <li class="card-item"
                   @click="openItem('trip', trip.id)"
-                  @touchstart="startPress('trip', trip)" @touchend="cancelPress()" @touchmove="cancelPress()"
-                  @mousedown="startPress('trip', trip)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
+                  @touchstart="startPress(trip)" @touchend="cancelPress()" @touchmove="cancelPress()"
+                  @mousedown="startPress(trip)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
                   @contextmenu.prevent>
                 <span x-text="trip.name"></span>
                 <span class="card-sub" x-show="trip.date" x-text="trip.date"></span>
@@ -224,26 +205,16 @@ export function renderHome(container) {
 
       <div class="modal-overlay" x-show="creating" x-cloak @click.self="closeCreating()">
         <div class="modal-sheet" x-show="creating">
-          <h3 x-text="creating === 'template' ? 'New Template' : 'New Trip'"></h3>
+          <h3>New Trip</h3>
           <button @click="createBlank()">Start blank</button>
+          <button x-show="database" @click="createFromDatabase()" x-text="'From: ' + database?.name"></button>
 
-          <template x-if="creating === 'trip'">
-            <div class="modal-subgroup">
-              <p class="screen-placeholder" x-show="templates.length === 0">No templates to copy from yet.</p>
-              <template x-for="tpl in templates" :key="tpl.id">
-                <button @click="createFromTemplate(tpl.id, tpl.name)" x-text="'From: ' + tpl.name"></button>
-              </template>
-            </div>
-          </template>
-
-          <template x-if="creating === 'template'">
-            <div class="modal-subgroup">
-              <p class="screen-placeholder" x-show="templates.length === 0">No templates to duplicate yet.</p>
-              <template x-for="tpl in templates" :key="tpl.id">
-                <button @click="duplicateIntoNewTemplate(tpl.id, tpl.name)" x-text="'Duplicate: ' + tpl.name"></button>
-              </template>
-            </div>
-          </template>
+          <div class="modal-subgroup">
+            <p class="screen-placeholder" x-show="trips.length === 0">No trips to copy from yet.</p>
+            <template x-for="trip in trips" :key="trip.id">
+              <button @click="createFromExistingTrip(trip.id, trip.name)" x-text="'Copy: ' + trip.name"></button>
+            </template>
+          </div>
 
           <button class="btn-secondary" @click="closeCreating()">Cancel</button>
         </div>

@@ -4,7 +4,7 @@ import { db } from '../lib/firebase.js';
 import { getCurrentItem } from '../lib/store.js';
 import { watchCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '../data/catalog.js';
 import { watchBuckets } from '../data/buckets.js';
-import { updateTemplateItems } from '../data/templates.js';
+import { updateDatabaseItems } from '../data/database.js';
 import { updateTripItems } from '../data/trips.js';
 
 function findEntry(items, itemId) {
@@ -191,11 +191,17 @@ Alpine.data('prep', () => ({
     await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
   },
 
+  // The database has no exclude/pack state — every item in it is always "in".
+  get isDatabase() {
+    return this.currentItem?.type === 'template';
+  },
+
   isExcluded(catalogItem) {
-    return this.entryFor(catalogItem.id)?.excluded === true;
+    return !this.isDatabase && this.entryFor(catalogItem.id)?.excluded === true;
   },
 
   async toggleExcluded(catalogItem) {
+    if (this.isDatabase) return;
     const items = this.itemDoc?.items || [];
     const next = upsertEntry(
       items,
@@ -207,8 +213,8 @@ Alpine.data('prep', () => ({
   },
 
   async persist(items) {
-    if (this.currentItem.type === 'template') {
-      await updateTemplateItems(this.currentItem.id, items);
+    if (this.isDatabase) {
+      await updateDatabaseItems(this.currentItem.id, items);
     } else {
       await updateTripItems(this.currentItem.id, items);
     }
@@ -297,12 +303,12 @@ Alpine.data('prep', () => ({
     this.bucketModal = null;
   },
 
-  get isTripWithTemplate() {
+  get isTripFromDatabase() {
     return this.currentItem?.type === 'trip' && !!this.itemDoc?.sourceTemplateId;
   },
 
-  async updateTemplateFromTrip() {
-    if (!confirm("Overwrite the template's items with this trip's current assignments? Checked state is not affected.")) {
+  async updateDatabaseFromTrip() {
+    if (!confirm("Overwrite the database's items with this trip's current assignments? Checked/excluded state is not affected.")) {
       return;
     }
     const items = (this.itemDoc.items || []).map(({ itemId, bucketIds, quantity, comboSide }) => ({
@@ -312,10 +318,10 @@ Alpine.data('prep', () => ({
       ...(comboSide ? { comboSide } : {}),
     }));
     try {
-      await updateTemplateItems(this.itemDoc.sourceTemplateId, items);
-      alert('Template updated.');
+      await updateDatabaseItems(this.itemDoc.sourceTemplateId, items);
+      alert('Database updated.');
     } catch (err) {
-      alert(`Couldn't update template: ${err.message}`);
+      alert(`Couldn't update database: ${err.message}`);
     }
   },
 
@@ -354,7 +360,7 @@ export function renderPrep(container) {
     container.innerHTML = `
       <div class="screen" data-screen="prep">
         <h2>Prep</h2>
-        <p class="screen-placeholder">No template or trip is open. Go to Home and open one first.</p>
+        <p class="screen-placeholder">No database or trip is open. Go to Home and open one first.</p>
       </div>
     `;
     return;
@@ -366,7 +372,7 @@ export function renderPrep(container) {
         <h2 x-text="itemDoc?.name || '…'"></h2>
         <div class="prep-header-actions">
           <button class="btn-secondary header-action-mobile-only" @click="openAddItem()">+ Add item to catalog</button>
-          <button class="btn-secondary" x-show="isTripWithTemplate" @click="updateTemplateFromTrip()">Update template from this trip</button>
+          <button class="btn-secondary" x-show="isTripFromDatabase" @click="updateDatabaseFromTrip()">Update database from this trip</button>
         </div>
       </div>
 
@@ -389,6 +395,7 @@ export function renderPrep(container) {
           class="filter-chip"
           :class="hideExcluded ? 'filter-chip-active' : ''"
           @click="toggleHideExcluded()"
+          x-show="!isDatabase"
         >❌ Hide excluded</button>
         <button
           class="filter-chip"
