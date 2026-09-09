@@ -5,7 +5,12 @@ import { getCurrentItem } from '../lib/store.js';
 import { watchCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '../data/catalog.js';
 import { watchBuckets } from '../data/buckets.js';
 import { updateDatabaseItems } from '../data/database.js';
-import { updateTripItems } from '../data/trips.js';
+import {
+  updateTripItems,
+  addLocalCatalogItem,
+  updateLocalCatalogItem,
+  deleteLocalCatalogItem,
+} from '../data/trips.js';
 
 function findEntry(items, itemId) {
   return items.find((entry) => entry.itemId === itemId);
@@ -70,8 +75,20 @@ Alpine.data('prep', () => ({
     this._unsubBuckets?.();
   },
 
+  // Trip-local items (added via "+ Add item" on a trip, not the database)
+  // live in the trip document itself and are merged in here for display —
+  // they never appear in the shared catalog collection.
+  get effectiveCatalog() {
+    if (this.isDatabase) return this.catalog;
+    return [...this.catalog, ...(this.itemDoc?.localCatalog || [])];
+  },
+
+  isLocalItem(catalogItem) {
+    return !this.isDatabase && (this.itemDoc?.localCatalog || []).some((item) => item.id === catalogItem.id);
+  },
+
   get categoryNames() {
-    return [...new Set(this.catalog.map((item) => item.category))].sort((a, b) =>
+    return [...new Set(this.effectiveCatalog.map((item) => item.category))].sort((a, b) =>
       a.localeCompare(b, 'de')
     );
   },
@@ -79,8 +96,8 @@ Alpine.data('prep', () => ({
   get filteredItems() {
     let items =
       this.selectedCategories.length === 0
-        ? this.catalog
-        : this.catalog.filter((item) => this.selectedCategories.includes(item.category));
+        ? this.effectiveCatalog
+        : this.effectiveCatalog.filter((item) => this.selectedCategories.includes(item.category));
     if (this.comboFilterActive) {
       items = items.filter((item) => this.comboStateFor(item));
     }
@@ -277,7 +294,11 @@ Alpine.data('prep', () => ({
     if (!category) return;
     const icon = this.editItemIcon.trim() || '📦';
     try {
-      await updateCatalogItem(this.editItemModal.id, { name, category, icon });
+      if (this.isLocalItem(this.editItemModal)) {
+        await updateLocalCatalogItem(this.currentItem.id, this.editItemModal.id, { name, category, icon });
+      } else {
+        await updateCatalogItem(this.editItemModal.id, { name, category, icon });
+      }
       this.closeEditItem();
     } catch (err) {
       alert(`Couldn't save changes: ${err.message}`);
@@ -286,9 +307,14 @@ Alpine.data('prep', () => ({
 
   async deleteEditItem() {
     if (!this.editItemModal) return;
-    if (!confirm(`Delete "${this.editItemModal.name}" from the catalog? This can't be undone.`)) return;
+    const scope = this.isLocalItem(this.editItemModal) ? 'this checklist' : 'the catalog';
+    if (!confirm(`Delete "${this.editItemModal.name}" from ${scope}? This can't be undone.`)) return;
     try {
-      await deleteCatalogItem(this.editItemModal.id);
+      if (this.isLocalItem(this.editItemModal)) {
+        await deleteLocalCatalogItem(this.currentItem.id, this.editItemModal.id);
+      } else {
+        await deleteCatalogItem(this.editItemModal.id);
+      }
       this.closeEditItem();
     } catch (err) {
       alert(`Couldn't delete item: ${err.message}`);
@@ -345,7 +371,11 @@ Alpine.data('prep', () => ({
     if (!category) return;
     const icon = this.newItemIcon.trim() || '📦';
     try {
-      await createCatalogItem({ category, name, icon, defaultQuantity: 1 });
+      if (this.isDatabase) {
+        await createCatalogItem({ category, name, icon, defaultQuantity: 1 });
+      } else {
+        await addLocalCatalogItem(this.currentItem.id, { category, name, icon, defaultQuantity: 1 });
+      }
       this.closeAddItem();
     } catch (err) {
       alert(`Couldn't add item: ${err.message}`);
@@ -371,7 +401,7 @@ export function renderPrep(container) {
       <div class="prep-header">
         <h2 x-text="itemDoc?.name || '…'"></h2>
         <div class="prep-header-actions">
-          <button class="btn-secondary header-action-mobile-only" @click="openAddItem()">+ Add item to catalog</button>
+          <button class="btn-secondary header-action-mobile-only" @click="openAddItem()" x-text="isDatabase ? '+ Add item to catalog' : '+ Add item'"></button>
           <button class="btn-secondary" x-show="isTripFromDatabase" @click="updateDatabaseFromTrip()">Update database from this trip</button>
         </div>
       </div>
@@ -403,7 +433,7 @@ export function renderPrep(container) {
           @click="toggleSortMode()"
         >🔤 Sort alphabetically</button>
         <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
-        <button class="btn-secondary header-action-tablet-only" @click="openAddItem()">+ Add item to catalog</button>
+        <button class="btn-secondary header-action-tablet-only" @click="openAddItem()" x-text="isDatabase ? '+ Add item to catalog' : '+ Add item'"></button>
       </div>
 
       <div class="item-list-card">
@@ -442,7 +472,7 @@ export function renderPrep(container) {
 
       <div class="modal-overlay" x-show="addingItem" x-cloak @click.self="closeAddItem()">
         <div class="modal-sheet">
-          <h3>Add catalog item</h3>
+          <h3 x-text="isDatabase ? 'Add catalog item' : 'Add item to this checklist'"></h3>
           <input type="text" class="text-input" x-model="newItemIcon" placeholder="Icon" maxlength="4" />
           <input type="text" class="text-input" x-model="newItemName" placeholder="Item name" autofocus />
           <select class="text-input" x-model="newItemCategory">

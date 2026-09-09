@@ -23,8 +23,14 @@ export async function getTrip(id) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-export async function createTrip({ name, date = null, sourceTemplateId = null, items = [] }) {
-  const ref = await addDoc(tripsRef, { name, date, sourceTemplateId, items });
+export async function createTrip({
+  name,
+  date = null,
+  sourceTemplateId = null,
+  items = [],
+  localCatalog = [],
+}) {
+  const ref = await addDoc(tripsRef, { name, date, sourceTemplateId, items, localCatalog });
   return ref.id;
 }
 
@@ -47,8 +53,9 @@ export async function createTripFromDatabase({ name, date } = {}) {
 }
 
 // Starts a new trip as a fresh copy of an existing one: keeps bucket
-// assignments, quantities and excluded state, but resets checked/packed
-// progress since this is a new trip that hasn't been packed yet.
+// assignments, quantities, excluded state and any local-only catalog items,
+// but resets checked/packed progress since this is a new trip that hasn't
+// been packed yet.
 export async function createTripFromTrip(sourceTripId, { name, date } = {}) {
   const original = await getTrip(sourceTripId);
   if (!original) throw new Error('Trip not found');
@@ -60,6 +67,7 @@ export async function createTripFromTrip(sourceTripId, { name, date } = {}) {
       bucketIds: [...item.bucketIds],
       checked: {},
     })),
+    localCatalog: (original.localCatalog || []).map((item) => ({ ...item })),
   });
 }
 
@@ -75,6 +83,7 @@ export async function duplicateTrip(id, { name } = {}) {
       bucketIds: [...item.bucketIds],
       checked: { ...item.checked },
     })),
+    localCatalog: (original.localCatalog || []).map((item) => ({ ...item })),
   });
 }
 
@@ -88,4 +97,37 @@ export async function deleteTrip(id) {
 
 export async function updateTripItems(id, items) {
   await updateDoc(doc(db, 'trips', id), { items });
+}
+
+// Local catalog items live inside the trip document itself (not the shared
+// "catalog" collection), so they only ever appear in this trip and copies of
+// it made via createTripFromTrip/duplicateTrip — never in the database or
+// any other trip's Prep screen.
+function generateLocalItemId() {
+  return `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export async function addLocalCatalogItem(tripId, { category, name, icon, defaultQuantity = 1 }) {
+  const trip = await getTrip(tripId);
+  const item = { id: generateLocalItemId(), category, name, icon, defaultQuantity };
+  const localCatalog = [...(trip?.localCatalog || []), item];
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog });
+  return item.id;
+}
+
+export async function updateLocalCatalogItem(tripId, itemId, { category, name, icon }) {
+  const trip = await getTrip(tripId);
+  const localCatalog = (trip?.localCatalog || []).map((item) =>
+    item.id === itemId ? { ...item, category, name, icon } : item
+  );
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog });
+}
+
+// Also strips any item-entry referencing this local item, since it can no
+// longer resolve to a catalog item once deleted.
+export async function deleteLocalCatalogItem(tripId, itemId) {
+  const trip = await getTrip(tripId);
+  const localCatalog = (trip?.localCatalog || []).filter((item) => item.id !== itemId);
+  const items = (trip?.items || []).filter((entry) => entry.itemId !== itemId);
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog, items });
 }
