@@ -164,6 +164,13 @@ body {
   font-size: 13px;
 }
 
+.card-item-database {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+  font-weight: 600;
+}
+
 @media (min-width: 768px) {
   .home-lists {
     flex-direction: row;

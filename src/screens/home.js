@@ -159,12 +159,9 @@ export function renderHome(container) {
       <h2>Home</h2>
       <div class="home-lists">
         <section class="home-list">
-          <div class="home-list-header">
-            <h3>Database</h3>
-          </div>
           <p class="screen-placeholder" x-show="!database">No database yet.</p>
           <ul class="card-list" x-show="database">
-            <li class="card-item" @click="openDatabase()">
+            <li class="card-item card-item-database" @click="openDatabase()">
               <span x-text="database?.name"></span>
             </li>
           </ul>
