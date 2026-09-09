@@ -1,7 +1,7 @@
 import './styles.css';
 import Alpine from 'alpinejs';
 import { registerRoute, getRender, startRouter, navigateTo } from './lib/router.js';
-import { watchAuthState, isAllowedUser, signOutUser } from './lib/auth.js';
+import { watchAuthState, isAllowedUser } from './lib/auth.js';
 import { renderSignIn } from './screens/signin.js';
 import { renderHome } from './screens/home.js';
 import { renderPrep } from './screens/prep.js';
@@ -36,10 +36,6 @@ function renderAppShell() {
           </button>
         `
       ).join('')}
-      <button class="nav-tab" id="signout-btn" title="Sign out">
-        <span class="nav-icon">🚪</span>
-        <span class="nav-label">Sign out</span>
-      </button>
     </nav>
     <main class="app-main"></main>
   `;
@@ -50,8 +46,6 @@ function renderAppShell() {
   navButtons.forEach((button) => {
     button.addEventListener('click', () => navigateTo(button.dataset.path));
   });
-
-  app.querySelector('#signout-btn').addEventListener('click', () => signOutUser());
 
   startRouter((path) => {
     getRender(path)(main);
