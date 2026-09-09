@@ -3,6 +3,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 import { getCurrentItem } from '../lib/store.js';
 import { watchCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '../data/catalog.js';
+import { watchCategories, createCategory, deleteCategory } from '../data/categories.js';
 import { watchBuckets } from '../data/buckets.js';
 import { updateDatabaseItems } from '../data/database.js';
 import {
@@ -36,6 +37,7 @@ Alpine.data('prep', () => ({
   currentItem: getCurrentItem(),
   itemDoc: null,
   catalog: [],
+  categories: [],
   buckets: [],
   selectedCategories: [],
   comboFilterActive: false,
@@ -53,6 +55,7 @@ Alpine.data('prep', () => ({
   editItemName: '',
   editItemCategory: '',
   editItemNewCategory: '',
+  categoryModalOpen: false,
 
   init() {
     if (!this.currentItem) return;
@@ -64,6 +67,9 @@ Alpine.data('prep', () => ({
     this._unsubCatalog = watchCatalog((list) => {
       this.catalog = list;
     });
+    this._unsubCategories = watchCategories((list) => {
+      this.categories = list;
+    });
     this._unsubBuckets = watchBuckets((list) => {
       this.buckets = list;
     });
@@ -72,6 +78,7 @@ Alpine.data('prep', () => ({
   destroy() {
     this._unsubDoc?.();
     this._unsubCatalog?.();
+    this._unsubCategories?.();
     this._unsubBuckets?.();
   },
 
@@ -87,10 +94,13 @@ Alpine.data('prep', () => ({
     return !this.isDatabase && (this.itemDoc?.localCatalog || []).some((item) => item.id === catalogItem.id);
   },
 
+  // Merges the stored categories collection (which can hold empty
+  // categories with no items yet) with any category names still only
+  // implied by existing items — so nothing already in use disappears.
   get categoryNames() {
-    return [...new Set(this.effectiveCatalog.map((item) => item.category))].sort((a, b) =>
-      a.localeCompare(b, 'de')
-    );
+    const fromDocs = this.categories.map((c) => c.name);
+    const fromItems = this.effectiveCatalog.map((item) => item.category);
+    return [...new Set([...fromDocs, ...fromItems])].sort((a, b) => a.localeCompare(b, 'de'));
   },
 
   get filteredItems() {
@@ -109,6 +119,19 @@ Alpine.data('prep', () => ({
         ? a.icon.localeCompare(b.icon) || a.name.localeCompare(b.name, 'de')
         : a.name.localeCompare(b.name, 'de')
     );
+  },
+
+  // Keeps the categories collection in sync whenever a brand-new category
+  // name is typed via "+ New category…" on either modal, so it becomes a
+  // real, deletable category rather than just an implied one.
+  async ensureCategoryDoc(name) {
+    const exists = this.categories.some((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (exists) return;
+    try {
+      await createCategory(name);
+    } catch (err) {
+      console.error('Failed to save new category', err);
+    }
   },
 
   isCategorySelected(category) {
@@ -294,6 +317,7 @@ Alpine.data('prep', () => ({
     if (!category) return;
     const icon = this.editItemIcon.trim() || '📦';
     try {
+      if (this.editItemCategory === '__new__') await this.ensureCategoryDoc(category);
       if (this.isLocalItem(this.editItemModal)) {
         await updateLocalCatalogItem(this.currentItem.id, this.editItemModal.id, { name, category, icon });
       } else {
@@ -371,6 +395,7 @@ Alpine.data('prep', () => ({
     if (!category) return;
     const icon = this.newItemIcon.trim() || '📦';
     try {
+      if (this.newItemCategory === '__new__') await this.ensureCategoryDoc(category);
       if (this.isDatabase) {
         await createCatalogItem({ category, name, icon, defaultQuantity: 1 });
       } else {
@@ -379,6 +404,56 @@ Alpine.data('prep', () => ({
       this.closeAddItem();
     } catch (err) {
       alert(`Couldn't add item: ${err.message}`);
+    }
+  },
+
+  async openAddCategory() {
+    if (!this.isDatabase) return;
+    const name = prompt('New category name');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (this.categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
+      alert(`"${trimmed}" already exists.`);
+      return;
+    }
+    try {
+      await createCategory(trimmed);
+    } catch (err) {
+      alert(`Couldn't add category: ${err.message}`);
+    }
+  },
+
+  itemCountForCategory(name) {
+    return this.effectiveCatalog.filter((item) => item.category === name).length;
+  },
+
+  openDeleteCategory() {
+    if (!this.isDatabase) return;
+    this.categoryModalOpen = true;
+  },
+
+  closeDeleteCategory() {
+    this.categoryModalOpen = false;
+  },
+
+  async deleteCategoryByName(name) {
+    const count = this.itemCountForCategory(name);
+    if (count > 0) {
+      alert(`Can't delete "${name}" — it still has ${count} item(s) in it. Move or delete them first.`);
+      return;
+    }
+    const categoryDoc = this.categories.find((c) => c.name === name);
+    if (!categoryDoc) {
+      alert(`"${name}" isn't a stored category — there's nothing to delete.`);
+      return;
+    }
+    if (!confirm(`Delete category "${name}"? This can't be undone.`)) return;
+    try {
+      await deleteCategory(categoryDoc.id);
+      this.closeDeleteCategory();
+    } catch (err) {
+      alert(`Couldn't delete category: ${err.message}`);
     }
   },
 }));
@@ -401,7 +476,9 @@ export function renderPrep(container) {
       <div class="prep-header">
         <h2 x-text="itemDoc?.name || '…'"></h2>
         <div class="prep-header-actions">
-          <button class="btn-secondary header-action-mobile-only" @click="openAddItem()" x-text="isDatabase ? '+ Add item to catalog' : '+ Add item'"></button>
+          <button class="btn-secondary header-action-mobile-only" @click="openAddItem()">+ Add item</button>
+          <button class="btn-secondary header-action-mobile-only" x-show="isDatabase" @click="openAddCategory()">+ Add category</button>
+          <button class="btn-secondary header-action-mobile-only" x-show="isDatabase" @click="openDeleteCategory()">Delete category</button>
           <button class="btn-secondary" x-show="isTripFromDatabase" @click="updateDatabaseFromTrip()">Update database from this trip</button>
         </div>
       </div>
@@ -433,7 +510,9 @@ export function renderPrep(container) {
           @click="toggleSortMode()"
         >🔤 Sort alphabetically</button>
         <button class="filter-chip filter-chip-reset" x-show="hasActiveFilters" @click="resetFilters()">Show all</button>
-        <button class="btn-secondary header-action-tablet-only" @click="openAddItem()" x-text="isDatabase ? '+ Add item to catalog' : '+ Add item'"></button>
+        <button class="btn-secondary header-action-tablet-only" @click="openAddItem()">+ Add item</button>
+        <button class="btn-secondary header-action-tablet-only" x-show="isDatabase" @click="openAddCategory()">+ Add category</button>
+        <button class="btn-secondary header-action-tablet-only" x-show="isDatabase" @click="openDeleteCategory()">Delete category</button>
       </div>
 
       <div class="item-list-card">
@@ -490,6 +569,19 @@ export function renderPrep(container) {
           />
           <button @click="submitNewItem()">Add</button>
           <button class="btn-secondary" @click="closeAddItem()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="modal-overlay" x-show="categoryModalOpen" x-cloak @click.self="closeDeleteCategory()">
+        <div class="modal-sheet">
+          <h3>Delete category</h3>
+          <div class="modal-subgroup">
+            <p class="screen-placeholder" x-show="categoryNames.length === 0">No categories yet.</p>
+            <template x-for="cat in categoryNames" :key="cat">
+              <button @click="deleteCategoryByName(cat)" x-text="cat"></button>
+            </template>
+          </div>
+          <button class="btn-secondary" @click="closeDeleteCategory()">Cancel</button>
         </div>
       </div>
 
