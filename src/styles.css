@@ -526,6 +526,10 @@ body {
   opacity: 0.45;
 }
 
+.item-row-excluded .item-title {
+  text-decoration: line-through;
+}
+
 .qty-badge {
   flex: 0 0 auto;
   color: var(--color-text-secondary);
