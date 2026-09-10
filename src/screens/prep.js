@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase.js';
+import { onSnapshot } from 'firebase/firestore';
+import { userDoc } from '../lib/currentUser.js';
 import { getCurrentItem } from '../lib/store.js';
 import { watchCatalog, createCatalogItem, updateCatalogItem, deleteCatalogItem } from '../data/catalog.js';
 import { watchCategories, createCategory, deleteCategory } from '../data/categories.js';
@@ -61,7 +61,7 @@ Alpine.data('prep', () => ({
     if (!this.currentItem) return;
 
     const collectionName = this.currentItem.type === 'template' ? 'templates' : 'trips';
-    this._unsubDoc = onSnapshot(doc(db, collectionName, this.currentItem.id), (snap) => {
+    this._unsubDoc = onSnapshot(userDoc(collectionName, this.currentItem.id), (snap) => {
       this.itemDoc = snap.exists() ? { id: snap.id, ...snap.data() } : null;
     });
     this._unsubCatalog = watchCatalog((list) => {

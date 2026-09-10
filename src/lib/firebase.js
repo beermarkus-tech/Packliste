@@ -5,6 +5,7 @@ import {
   persistentSingleTabManager,
 } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFunctions } from 'firebase/functions';
 
 // Firebase web config values are not secret (see Firebase docs) — safe to
 // commit. Access control is enforced by Firestore security rules and the
@@ -35,3 +36,4 @@ export const db = initializeFirestore(
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export const functions = getFunctions(app);

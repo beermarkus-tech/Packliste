@@ -1,8 +1,11 @@
 import './styles.css';
 import Alpine from 'alpinejs';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './lib/firebase.js';
 import { registerRoute, getRender, startRouter, navigateTo } from './lib/router.js';
-import { watchAuthState, isAllowedUser } from './lib/auth.js';
+import { watchAuthState, watchUserProfile } from './lib/auth.js';
 import { renderSignIn } from './screens/signin.js';
+import { renderPaywall } from './screens/paywall.js';
 import { renderHome } from './screens/home.js';
 import { renderPrep } from './screens/prep.js';
 import { renderChecklist } from './screens/checklist.js';
@@ -24,6 +27,8 @@ document.getElementById('build-badge').textContent = `#${import.meta.env.VITE_BU
 
 const app = document.querySelector('#app');
 let shellStarted = false;
+let unsubProfile = null;
+let profileEnsuredForUid = null;
 
 function renderAppShell() {
   app.innerHTML = `
@@ -55,14 +60,53 @@ function renderAppShell() {
   });
 }
 
-watchAuthState((user) => {
-  if (isAllowedUser(user)) {
-    if (!shellStarted) {
-      shellStarted = true;
-      renderAppShell();
-    }
-  } else {
-    shellStarted = false;
-    renderSignIn(app, { deniedUser: user || undefined });
+// Creates the signed-in user's own profile doc the first time they're
+// seen, so there's something for watchUserProfile to read. Firestore
+// rules only allow a client to create an *unpaid* profile — `paid: true`
+// can only ever be set by the Stripe webhook's Admin SDK call.
+async function ensureProfile(user) {
+  if (profileEnsuredForUid === user.uid) return;
+  profileEnsuredForUid = user.uid;
+  try {
+    await setDoc(
+      doc(db, 'users', user.uid),
+      {
+        paid: false,
+        email: user.email,
+        createdAt: serverTimestamp(),
+        stripeCustomerId: null,
+        stripeCheckoutSessionId: null,
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error('Failed to create user profile', err);
   }
+}
+
+watchAuthState((user) => {
+  unsubProfile?.();
+  unsubProfile = null;
+
+  if (!user) {
+    shellStarted = false;
+    profileEnsuredForUid = null;
+    renderSignIn(app);
+    return;
+  }
+
+  unsubProfile = watchUserProfile(user.uid, (profile) => {
+    if (profile?.paid) {
+      if (!shellStarted) {
+        shellStarted = true;
+        renderAppShell();
+      }
+      return;
+    }
+    shellStarted = false;
+    if (profile === null) {
+      ensureProfile(user);
+    }
+    renderPaywall(app);
+  });
 });

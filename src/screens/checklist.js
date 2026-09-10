@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase.js';
+import { onSnapshot } from 'firebase/firestore';
+import { userDoc } from '../lib/currentUser.js';
 import { getCurrentItem } from '../lib/store.js';
 import { watchCatalog } from '../data/catalog.js';
 import { watchBuckets } from '../data/buckets.js';
@@ -18,7 +18,7 @@ Alpine.data('checklist', () => ({
   init() {
     if (!this.currentItem || this.currentItem.type !== 'trip') return;
 
-    this._unsubDoc = onSnapshot(doc(db, 'trips', this.currentItem.id), (snap) => {
+    this._unsubDoc = onSnapshot(userDoc('trips', this.currentItem.id), (snap) => {
       this.itemDoc = snap.exists() ? { id: snap.id, ...snap.data() } : null;
     });
     this._unsubCatalog = watchCatalog((list) => {
