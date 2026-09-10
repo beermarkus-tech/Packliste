@@ -1,7 +1,17 @@
-import { addDoc, updateDoc, deleteDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { userCollection, userDoc } from '../lib/currentUser.js';
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  onSnapshot,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase.js';
 import { getDatabase } from './database.js';
 import { getCatalog } from './catalog.js';
+
+const tripsRef = collection(db, 'trips');
 
 // Every new trip gets its own dead-copy snapshot of the full catalog at the
 // moment it's created — reusing each catalog item's own id as the local
@@ -20,13 +30,13 @@ function snapshotCatalog(catalogItems) {
 }
 
 export function watchTrips(callback) {
-  return onSnapshot(userCollection('trips'), (snap) => {
+  return onSnapshot(tripsRef, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   });
 }
 
 export async function getTrip(id) {
-  const snap = await getDoc(userDoc('trips', id));
+  const snap = await getDoc(doc(db, 'trips', id));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
@@ -37,7 +47,7 @@ export async function createTrip({
   items = [],
   localCatalog = [],
 }) {
-  const ref = await addDoc(userCollection('trips'), { name, date, sourceTemplateId, items, localCatalog });
+  const ref = await addDoc(tripsRef, { name, date, sourceTemplateId, items, localCatalog });
   return ref.id;
 }
 
@@ -110,15 +120,15 @@ export async function duplicateTrip(id, { name } = {}) {
 }
 
 export async function renameTrip(id, name) {
-  await updateDoc(userDoc('trips', id), { name });
+  await updateDoc(doc(db, 'trips', id), { name });
 }
 
 export async function deleteTrip(id) {
-  await deleteDoc(userDoc('trips', id));
+  await deleteDoc(doc(db, 'trips', id));
 }
 
 export async function updateTripItems(id, items) {
-  await updateDoc(userDoc('trips', id), { items });
+  await updateDoc(doc(db, 'trips', id), { items });
 }
 
 // Local catalog items live inside the trip document itself (not the shared
@@ -133,7 +143,7 @@ export async function addLocalCatalogItem(tripId, { category, name, icon, defaul
   const trip = await getTrip(tripId);
   const item = { id: generateLocalItemId(), category, name, icon, defaultQuantity };
   const localCatalog = [...(trip?.localCatalog || []), item];
-  await updateDoc(userDoc('trips', tripId), { localCatalog });
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog });
   return item.id;
 }
 
@@ -142,7 +152,7 @@ export async function updateLocalCatalogItem(tripId, itemId, { category, name, i
   const localCatalog = (trip?.localCatalog || []).map((item) =>
     item.id === itemId ? { ...item, category, name, icon } : item
   );
-  await updateDoc(userDoc('trips', tripId), { localCatalog });
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog });
 }
 
 // Also strips any item-entry referencing this local item, since it can no
@@ -151,5 +161,5 @@ export async function deleteLocalCatalogItem(tripId, itemId) {
   const trip = await getTrip(tripId);
   const localCatalog = (trip?.localCatalog || []).filter((item) => item.id !== itemId);
   const items = (trip?.items || []).filter((entry) => entry.itemId !== itemId);
-  await updateDoc(userDoc('trips', tripId), { localCatalog, items });
+  await updateDoc(doc(db, 'trips', tripId), { localCatalog, items });
 }
