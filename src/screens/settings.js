@@ -1,7 +1,6 @@
 import Alpine from 'alpinejs';
 import { watchBuckets, createBucket, renameBucket, deleteBucket } from '../data/buckets.js';
 import { signOutUser } from '../lib/auth.js';
-import { migrateTripsToLocalCatalog } from '../data/migrateTripsToLocalCatalog.js';
 
 const LONG_PRESS_MS = 500;
 
@@ -13,8 +12,6 @@ Alpine.data('settings', () => ({
   newBucketName: '',
   newBucketType: 'luggage',
   pressTimer: null,
-  migrateStatus: '',
-  migrating: false,
 
   init() {
     this._unsubBuckets = watchBuckets((list) => {
@@ -91,26 +88,6 @@ Alpine.data('settings', () => ({
     if (!confirm('Sign out?')) return;
     signOutUser();
   },
-
-  async runTripMigration() {
-    if (
-      !confirm(
-        "This backfills every existing trip with a snapshot of the current catalog, so its items stop depending on the shared catalog (matching newly-created trips). It only adds items a trip doesn't already have — safe to run more than once. Continue?"
-      )
-    ) {
-      return;
-    }
-    this.migrating = true;
-    this.migrateStatus = 'Migrating…';
-    try {
-      const result = await migrateTripsToLocalCatalog();
-      this.migrateStatus = `Done. Updated ${result.tripsUpdated} of ${result.tripCount} trip(s), added ${result.itemsAdded} item(s) total.`;
-    } catch (err) {
-      this.migrateStatus = `Failed: ${err.message}`;
-    } finally {
-      this.migrating = false;
-    }
-  },
 }));
 
 export function renderSettings(container) {
@@ -135,13 +112,6 @@ export function renderSettings(container) {
             </li>
           </template>
         </ul>
-      </section>
-
-      <section class="settings-section">
-        <h3>One-time: snapshot catalog into existing trips</h3>
-        <p class="screen-placeholder">Trips created before this feature still depend on the shared catalog for item names/icons. Run this once to give them their own independent copy too — ask Claude to remove this section afterward.</p>
-        <button class="btn-primary" :disabled="migrating" @click="runTripMigration()">Run migration</button>
-        <p x-text="migrateStatus"></p>
       </section>
 
       <section class="settings-section">
