@@ -185,9 +185,17 @@ Alpine.data('prep', () => ({
     return !!this.entryFor(catalogItem.id)?.bucketIds?.includes(bucketId);
   },
 
+  // Koffer/Hinreise are represented by the combo chip instead when the item
+  // is in any combo state (including "beide", where they're both directly
+  // in bucketIds) — excluded here so they aren't shown twice.
   assignedBuckets(catalogItem) {
     const ids = this.entryFor(catalogItem.id)?.bucketIds || [];
-    return this.buckets.filter((bucket) => ids.includes(bucket.id));
+    const comboIds = new Set();
+    if (this.comboStateFor(catalogItem)) {
+      if (this.kofferBucket) comboIds.add(this.kofferBucket.id);
+      if (this.hinreiseBucket) comboIds.add(this.hinreiseBucket.id);
+    }
+    return this.buckets.filter((bucket) => ids.includes(bucket.id) && !comboIds.has(bucket.id));
   },
 
   get kofferBucket() {
@@ -198,26 +206,51 @@ Alpine.data('prep', () => ({
     return this.buckets.find((bucket) => bucket.name === 'Hinreise');
   },
 
-  // 'koffer' | 'hinreise' | null. Independent of bucketIds — selecting the
-  // combo in the modal clears any direct Koffer/Hinreise assignment, and
-  // selecting Koffer/Hinreise directly clears the combo, so the two never
-  // overlap.
+  // 'koffer' | 'hinreise' | 'beide' | null. "beide" means the item is
+  // assigned directly to both buckets (bucketIds contains both ids, no
+  // comboSide) — reached via the row chip's 3rd tap, or by toggling both
+  // buckets individually in the modal. It's checked independently in each
+  // bucket's own checklist, same as any other multi-bucket item.
   comboStateFor(catalogItem) {
-    const side = this.entryFor(catalogItem.id)?.comboSide;
-    return side === 'koffer' || side === 'hinreise' ? side : null;
+    const entry = this.entryFor(catalogItem.id);
+    if (!entry) return null;
+    if (entry.comboSide === 'koffer' || entry.comboSide === 'hinreise') return entry.comboSide;
+    if (this.kofferBucket && this.hinreiseBucket) {
+      const hasKoffer = entry.bucketIds?.includes(this.kofferBucket.id);
+      const hasHinreise = entry.bucketIds?.includes(this.hinreiseBucket.id);
+      if (hasKoffer && hasHinreise) return 'beide';
+    }
+    return null;
   },
 
-  // Row-level chip: flips directly between the two sides, no modal.
+  // Used only by the bucket-modal's combined "Koffer/Hinreise" button, which
+  // stays a simple on/off for the comboSide-based states — "beide" is always
+  // reached via the two individual bucket buttons or the row chip's 3rd tap,
+  // never through this one, so it shouldn't react to a "beide" it didn't set.
+  isComboSideActive(catalogItem) {
+    const side = this.entryFor(catalogItem.id)?.comboSide;
+    return side === 'koffer' || side === 'hinreise';
+  },
+
+  // Row-level chip: cycles Koffer -> Hinreise -> Beide (both, ticked off
+  // independently in each list) -> back to Koffer.
   async toggleComboBucket(catalogItem) {
-    const combo = this.comboStateFor(catalogItem);
-    if (!combo) return;
+    const state = this.comboStateFor(catalogItem);
+    if (!state || !this.kofferBucket || !this.hinreiseBucket) return;
     const items = this.itemDoc?.items || [];
-    const next = upsertEntry(
-      items,
-      catalogItem.id,
-      { comboSide: combo === 'koffer' ? 'hinreise' : 'koffer' },
-      catalogItem
+    const existing = findEntry(items, catalogItem.id);
+    const others = (existing?.bucketIds || []).filter(
+      (id) => id !== this.kofferBucket.id && id !== this.hinreiseBucket.id
     );
+    let patch;
+    if (state === 'koffer') {
+      patch = { comboSide: 'hinreise', bucketIds: others };
+    } else if (state === 'hinreise') {
+      patch = { comboSide: null, bucketIds: [...others, this.kofferBucket.id, this.hinreiseBucket.id] };
+    } else {
+      patch = { comboSide: 'koffer', bucketIds: others };
+    }
+    const next = upsertEntry(items, catalogItem.id, patch, catalogItem);
     await this.persist(next).catch((err) => console.error('Failed to toggle Koffer/Hinreise', err));
   },
 
@@ -227,7 +260,7 @@ Alpine.data('prep', () => ({
     if (!this.kofferBucket || !this.hinreiseBucket) return;
     const items = this.itemDoc?.items || [];
     const existing = findEntry(items, catalogItem.id);
-    const alreadyCombo = !!this.comboStateFor(catalogItem);
+    const alreadyCombo = this.isComboSideActive(catalogItem);
     const excludeIds = new Set([this.kofferBucket.id, this.hinreiseBucket.id]);
     const nextBucketIds = (existing?.bucketIds || []).filter((id) => !excludeIds.has(id));
     const patch = alreadyCombo
@@ -540,10 +573,11 @@ export function renderPrep(container) {
               >+</span>
               <span
                 class="chip-mini chip-mini-combo"
+                :class="comboStateFor(item) === 'beide' ? 'chip-mini-combo-beide' : ''"
                 x-show="comboStateFor(item)"
-                :title="comboStateFor(item) === 'koffer' ? 'Koffer' : 'Hinreise'"
+                :title="comboStateFor(item) === 'koffer' ? 'Koffer' : comboStateFor(item) === 'hinreise' ? 'Hinreise' : 'Koffer & Hinreise'"
                 @click.stop="toggleComboBucket(item)"
-                x-text="comboStateFor(item) === 'koffer' ? kofferBucket?.icon : hinreiseBucket?.icon"
+                x-text="comboStateFor(item) === 'koffer' ? kofferBucket?.icon : comboStateFor(item) === 'hinreise' ? hinreiseBucket?.icon : (kofferBucket?.icon + hinreiseBucket?.icon)"
               ></span>
               <span
                 class="chip-mini chip-mini-empty"
@@ -636,11 +670,11 @@ export function renderPrep(container) {
           <template x-if="kofferBucket && hinreiseBucket">
             <button
               class="bucket-toggle-btn bucket-toggle-combo"
-              :class="bucketModal && comboStateFor(bucketModal) ? 'bucket-toggle-active' : ''"
+              :class="bucketModal && isComboSideActive(bucketModal) ? 'bucket-toggle-active' : ''"
               @click="toggleComboSelection(bucketModal)">
-              <span x-text="bucketModal && comboStateFor(bucketModal) === 'hinreise' ? hinreiseBucket.icon : kofferBucket.icon"></span>
+              <span x-text="bucketModal && entryFor(bucketModal.id)?.comboSide === 'hinreise' ? hinreiseBucket.icon : kofferBucket.icon"></span>
               <span>Koffer/Hinreise</span>
-              <span class="bucket-toggle-check" x-show="bucketModal && comboStateFor(bucketModal)">✓</span>
+              <span class="bucket-toggle-check" x-show="bucketModal && isComboSideActive(bucketModal)">✓</span>
             </button>
           </template>
           <template x-for="bucket in buckets" :key="bucket.id">

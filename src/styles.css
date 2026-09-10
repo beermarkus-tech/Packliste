@@ -607,6 +607,13 @@ body {
   cursor: pointer;
 }
 
+.chip-mini-combo-beide {
+  width: auto;
+  min-width: 36px;
+  padding: 0 6px;
+  font-size: 15px;
+}
+
 .bucket-toggle-btn {
   display: flex;
   align-items: center;
