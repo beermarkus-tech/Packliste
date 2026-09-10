@@ -12,10 +12,10 @@ export function watchBuckets(callback) {
 
 // New buckets append to the end — order is just "current max + 1", no
 // manual reordering support.
-export async function createBucket({ name, icon, type }) {
+export async function createBucket({ name, icon }) {
   const snap = await getDocs(bucketsQuery);
   const maxOrder = snap.docs.reduce((max, d) => Math.max(max, d.data().order || 0), 0);
-  const ref = await addDoc(bucketsRef, { name, icon, type, order: maxOrder + 1 });
+  const ref = await addDoc(bucketsRef, { name, icon, order: maxOrder + 1 });
   return ref.id;
 }
 

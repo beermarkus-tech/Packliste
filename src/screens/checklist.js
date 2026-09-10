@@ -187,7 +187,7 @@ Alpine.data('checklist', () => ({
     if (bucket.id === this.unpackedBucket.id) {
       return `${this.itemsForBucket(bucket.id).length} remaining`;
     }
-    return `${this.progressFor(bucket.id)} ${bucket.type === 'tasklist' ? 'done' : 'packed'}`;
+    return `${this.progressFor(bucket.id)} packed`;
   },
 
   isBucketComplete(bucketId) {

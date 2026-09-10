@@ -10,7 +10,6 @@ Alpine.data('settings', () => ({
   creating: false,
   newBucketIcon: '🧳',
   newBucketName: '',
-  newBucketType: 'luggage',
   pressTimer: null,
 
   init() {
@@ -65,7 +64,6 @@ Alpine.data('settings', () => ({
     this.creating = true;
     this.newBucketIcon = '🧳';
     this.newBucketName = '';
-    this.newBucketType = 'luggage';
   },
 
   closeNewBucket() {
@@ -77,7 +75,7 @@ Alpine.data('settings', () => ({
     if (!name) return;
     const icon = this.newBucketIcon.trim() || '🧳';
     try {
-      await createBucket({ name, icon, type: this.newBucketType });
+      await createBucket({ name, icon });
       this.closeNewBucket();
     } catch (err) {
       alert(`Couldn't add bucket: ${err.message}`);
@@ -108,7 +106,6 @@ export function renderSettings(container) {
                 @mousedown="startPress(bucket)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
                 @contextmenu.prevent>
               <span x-text="bucket.icon + ' ' + bucket.name"></span>
-              <span class="card-sub" x-show="bucket.type === 'tasklist'">Task list</span>
             </li>
           </template>
         </ul>
@@ -133,10 +130,6 @@ export function renderSettings(container) {
           <h3>New Bucket</h3>
           <input type="text" class="text-input" x-model="newBucketIcon" placeholder="Icon" maxlength="4" />
           <input type="text" class="text-input" x-model="newBucketName" placeholder="Bucket name" autofocus />
-          <select class="text-input" x-model="newBucketType">
-            <option value="luggage">Luggage</option>
-            <option value="tasklist">Task list</option>
-          </select>
           <button @click="submitNewBucket()">Add</button>
           <button class="btn-secondary" @click="closeNewBucket()">Cancel</button>
         </div>
