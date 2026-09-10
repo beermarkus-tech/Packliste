@@ -22,10 +22,10 @@ const tripsRef = collection(db, 'trips');
 function snapshotCatalog(catalogItems) {
   return catalogItems.map(({ id, category, name, icon, defaultQuantity }) => ({
     id,
-    category,
-    name,
-    icon,
-    defaultQuantity,
+    category: category ?? '',
+    name: name ?? '',
+    icon: icon ?? '📦',
+    defaultQuantity: defaultQuantity ?? 1,
   }));
 }
 

@@ -23,7 +23,13 @@ export async function migrateTripsToLocalCatalog() {
     const existingIds = new Set((trip.localCatalog || []).map((item) => item.id));
     const additions = catalog
       .filter((item) => !existingIds.has(item.id))
-      .map(({ id, category, name, icon, defaultQuantity }) => ({ id, category, name, icon, defaultQuantity }));
+      .map(({ id, category, name, icon, defaultQuantity }) => ({
+        id,
+        category: category ?? '',
+        name: name ?? '',
+        icon: icon ?? '📦',
+        defaultQuantity: defaultQuantity ?? 1,
+      }));
 
     if (additions.length === 0) continue;
 
