@@ -4,7 +4,7 @@ import { setCurrentItem } from '../lib/store.js';
 import { watchDatabase, createDatabase } from '../data/database.js';
 import {
   watchTrips,
-  createTrip,
+  createBlankTrip,
   createTripFromDatabase,
   createTripFromTrip,
   duplicateTrip,
@@ -120,7 +120,7 @@ Alpine.data('home', () => ({
     const name = prompt('Name your new trip');
     if (!name) return;
     try {
-      const id = await createTrip({ name, items: [] });
+      const id = await createBlankTrip({ name });
       this.closeCreating();
       this.openItem('trip', id);
     } catch (err) {

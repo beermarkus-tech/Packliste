@@ -82,12 +82,18 @@ Alpine.data('prep', () => ({
     this._unsubBuckets?.();
   },
 
-  // Trip-local items (added via "+ Add item" on a trip, not the database)
-  // live in the trip document itself and are merged in here for display —
-  // they never appear in the shared catalog collection.
+  // Every trip owns a dead-copy snapshot of the catalog, taken the moment it
+  // was created (see data/trips.js) — that's the trip's whole item list from
+  // then on, fully independent of the shared catalog and the database.
+  // Falling back to the live catalog for any id missing there covers trips
+  // created before this snapshot existed; run the one-time migration in
+  // Settings to backfill those too.
   get effectiveCatalog() {
     if (this.isDatabase) return this.catalog;
-    return [...this.catalog, ...(this.itemDoc?.localCatalog || [])];
+    const local = this.itemDoc?.localCatalog || [];
+    const localIds = new Set(local.map((item) => item.id));
+    const fallback = this.catalog.filter((item) => !localIds.has(item.id));
+    return [...local, ...fallback];
   },
 
   isLocalItem(catalogItem) {

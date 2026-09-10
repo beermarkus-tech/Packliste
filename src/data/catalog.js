@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 
 const catalogRef = collection(db, 'catalog');
@@ -7,6 +7,11 @@ export function watchCatalog(callback) {
   return onSnapshot(catalogRef, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   });
+}
+
+export async function getCatalog() {
+  const snap = await getDocs(catalogRef);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 // New catalog items appear immediately for every template/trip going

@@ -105,8 +105,16 @@ Alpine.data('checklist', () => ({
     }
   },
 
+  // Trips own a dead-copy snapshot of the catalog from the moment they were
+  // created (see data/trips.js) — that's checked first, so a later rename
+  // via the shared catalog never changes what's already shown here. Falling
+  // back to the live catalog only covers trips created before this snapshot
+  // existed; the one-time migration in Settings backfills those too.
   catalogFor(itemId) {
-    return this.catalog.find((c) => c.id === itemId);
+    return (
+      (this.itemDoc?.localCatalog || []).find((c) => c.id === itemId) ||
+      this.catalog.find((c) => c.id === itemId)
+    );
   },
 
   get kofferBucket() {

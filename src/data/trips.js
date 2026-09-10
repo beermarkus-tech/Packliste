@@ -9,8 +9,25 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 import { getDatabase } from './database.js';
+import { getCatalog } from './catalog.js';
 
 const tripsRef = collection(db, 'trips');
+
+// Every new trip gets its own dead-copy snapshot of the full catalog at the
+// moment it's created — reusing each catalog item's own id as the local
+// item's id, so item-entries that reference these ids (bucket assignments
+// copied from the database) keep resolving without any remapping. From this
+// point on the trip is fully independent: a rename via the shared catalog
+// (or the database) never touches an already-created trip, and vice versa.
+function snapshotCatalog(catalogItems) {
+  return catalogItems.map(({ id, category, name, icon, defaultQuantity }) => ({
+    id,
+    category,
+    name,
+    icon,
+    defaultQuantity,
+  }));
+}
 
 export function watchTrips(callback) {
   return onSnapshot(tripsRef, (snap) => {
@@ -42,6 +59,7 @@ export async function createTrip({
 export async function createTripFromDatabase({ name, date } = {}) {
   const database = await getDatabase();
   if (!database) throw new Error('Database not found');
+  const catalog = await getCatalog();
   const items = (database.items || []).map((item) => ({
     itemId: item.itemId,
     bucketIds: [...item.bucketIds],
@@ -49,7 +67,21 @@ export async function createTripFromDatabase({ name, date } = {}) {
     checked: {},
     ...(item.comboSide ? { comboSide: item.comboSide } : {}),
   }));
-  return createTrip({ name: name || database.name, date, sourceTemplateId: database.id, items });
+  return createTrip({
+    name: name || database.name,
+    date,
+    sourceTemplateId: database.id,
+    items,
+    localCatalog: snapshotCatalog(catalog),
+  });
+}
+
+// "Start blank": no bucket assignments yet, but Prep still needs something
+// to browse and assign from, so it gets the same dead-copy catalog snapshot
+// as a trip created from the database.
+export async function createBlankTrip({ name, date } = {}) {
+  const catalog = await getCatalog();
+  return createTrip({ name, date, items: [], localCatalog: snapshotCatalog(catalog) });
 }
 
 // Starts a new trip as a fresh copy of an existing one: keeps bucket
