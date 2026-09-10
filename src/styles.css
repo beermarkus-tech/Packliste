@@ -742,6 +742,12 @@ body {
   text-decoration: line-through;
 }
 
+.checklist-source-icon {
+  flex: 0 0 auto;
+  opacity: 0.6;
+  font-size: 13px;
+}
+
 .checklist-row-checked {
   opacity: 0.7;
 }

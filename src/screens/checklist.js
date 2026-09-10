@@ -12,7 +12,7 @@ Alpine.data('checklist', () => ({
   catalog: [],
   buckets: [],
   activeBucketId: null,
-  hiddenBucketIds: [],
+  hiddenBucketIds: ['__unchecked__'], // the virtual "Unchecked" bucket starts hidden
   sortMode: 'symbol', // 'alpha' | 'symbol'
 
   init() {
@@ -40,6 +40,22 @@ Alpine.data('checklist', () => ({
 
   selectBucket(bucketId) {
     this.activeBucketId = bucketId;
+  },
+
+  // A synthetic bucket, not stored anywhere, that aggregates every unchecked
+  // item across every real bucket. It flows through the same chip/panel
+  // machinery as a real bucket (see displayBuckets) so it gets identical
+  // styling and mobile/tablet behavior for free.
+  get unpackedBucket() {
+    return { id: '__unchecked__', name: 'Unchecked', icon: '🔲', type: 'virtual' };
+  },
+
+  get displayBuckets() {
+    return [...this.buckets, this.unpackedBucket];
+  },
+
+  bucketIcon(bucketId) {
+    return this.buckets.find((b) => b.id === bucketId)?.icon || '';
   },
 
   // Tablet shows every bucket's checklist at once as a grid of panels,
@@ -114,19 +130,25 @@ Alpine.data('checklist', () => ({
     return false;
   },
 
-  itemsForBucket(bucketId) {
-    const rows = (this.itemDoc?.items || [])
+  rowsForBucket(bucketId) {
+    return (this.itemDoc?.items || [])
       .filter((entry) => !entry.excluded && this.isInBucket(entry, bucketId))
-      .map((entry) => ({ entry, catalogItem: this.catalogFor(entry.itemId) }))
+      .map((entry) => ({ entry, catalogItem: this.catalogFor(entry.itemId), bucketId }))
       .filter((row) => !!row.catalogItem);
+  },
 
-    // Flat alphabetical order — Checklist shows no category headers, so
-    // grouping by category here would make the order look arbitrary.
-    // Checked items sink to the bottom of the whole list, not per-category.
-    return rows.sort((a, b) => {
-      const checkedA = this.isChecked(a.entry, bucketId);
-      const checkedB = this.isChecked(b.entry, bucketId);
-      if (checkedA !== checkedB) return checkedA ? 1 : -1;
+  // Flat alphabetical (or symbol) order — Checklist shows no category
+  // headers, so grouping by category would make the order look arbitrary.
+  // checkedLast sinks checked items to the bottom of a real bucket's own
+  // list; the virtual "Unchecked" view has nothing checked in it by
+  // construction, so it skips that pass.
+  sortRows(rows, { checkedLast }) {
+    return [...rows].sort((a, b) => {
+      if (checkedLast) {
+        const checkedA = this.isChecked(a.entry, a.bucketId);
+        const checkedB = this.isChecked(b.entry, b.bucketId);
+        if (checkedA !== checkedB) return checkedA ? 1 : -1;
+      }
       if (this.sortMode === 'symbol') {
         return (
           a.catalogItem.icon.localeCompare(b.catalogItem.icon) ||
@@ -137,10 +159,27 @@ Alpine.data('checklist', () => ({
     });
   },
 
+  itemsForBucket(bucketId) {
+    if (bucketId === this.unpackedBucket.id) {
+      const rows = this.buckets.flatMap((bucket) =>
+        this.rowsForBucket(bucket.id).filter((row) => !this.isChecked(row.entry, row.bucketId))
+      );
+      return this.sortRows(rows, { checkedLast: false });
+    }
+    return this.sortRows(this.rowsForBucket(bucketId), { checkedLast: true });
+  },
+
   progressFor(bucketId) {
     const rows = this.itemsForBucket(bucketId);
     const done = rows.filter((row) => this.isChecked(row.entry, bucketId)).length;
     return `${done}/${rows.length}`;
+  },
+
+  panelProgressLabel(bucket) {
+    if (bucket.id === this.unpackedBucket.id) {
+      return `${this.itemsForBucket(bucket.id).length} remaining`;
+    }
+    return `${this.progressFor(bucket.id)} ${bucket.type === 'tasklist' ? 'done' : 'packed'}`;
   },
 
   isBucketComplete(bucketId) {
@@ -148,8 +187,12 @@ Alpine.data('checklist', () => ({
     return rows.length > 0 && rows.every((row) => this.isChecked(row.entry, bucketId));
   },
 
-  // null for an empty bucket — nothing to show a percentage of.
+  // null for an empty bucket — nothing to show a percentage of. Also null
+  // for the virtual "Unchecked" bucket: every row in it is by construction
+  // unchecked, so the badge could only ever show a stuck 0% until the list
+  // empties, which is more confusing than useful.
   percentFor(bucketId) {
+    if (bucketId === this.unpackedBucket.id) return null;
     const rows = this.itemsForBucket(bucketId);
     if (rows.length === 0) return null;
     const done = rows.filter((row) => this.isChecked(row.entry, bucketId)).length;
@@ -195,10 +238,10 @@ export function renderChecklist(container) {
       </div>
 
       <div class="bucket-tabs">
-        <template x-for="bucket in buckets" :key="bucket.id">
+        <template x-for="bucket in displayBuckets" :key="bucket.id">
           <button
             class="filter-chip"
-            :class="(!isTabletLayout && activeBucketId === bucket.id ? 'filter-chip-active ' : '') + (isBucketHidden(bucket.id) ? 'filter-chip-hidden ' : (isBucketComplete(bucket.id) ? 'filter-chip-complete' : ''))"
+            :class="(!isTabletLayout && activeBucketId === bucket.id ? 'filter-chip-active ' : '') + (isTabletLayout && isBucketHidden(bucket.id) ? 'filter-chip-hidden ' : (isBucketComplete(bucket.id) ? 'filter-chip-complete' : ''))"
             @click="onBucketChipClick(bucket.id)">
             <span x-text="bucket.icon"></span>
             <span x-text="bucket.name"></span>
@@ -215,23 +258,24 @@ export function renderChecklist(container) {
       </div>
 
       <div class="bucket-panels">
-        <template x-for="bucket in buckets" :key="bucket.id">
+        <template x-for="bucket in displayBuckets" :key="bucket.id">
           <div class="bucket-panel" :class="(activeBucketId === bucket.id ? 'bucket-panel-active ' : '') + (isBucketHidden(bucket.id) ? 'bucket-panel-hidden' : '')">
             <div class="bucket-panel-header">
               <span x-text="bucket.icon + ' ' + bucket.name"></span>
-              <span class="bucket-progress" x-text="progressFor(bucket.id) + ' ' + (bucket.type === 'tasklist' ? 'done' : 'packed')"></span>
+              <span class="bucket-progress" x-text="panelProgressLabel(bucket)"></span>
             </div>
             <p class="screen-placeholder" x-show="itemsForBucket(bucket.id).length === 0">Nothing here yet.</p>
             <ul class="checklist-list">
-              <template x-for="row in itemsForBucket(bucket.id)" :key="row.entry.itemId">
+              <template x-for="row in itemsForBucket(bucket.id)" :key="row.entry.itemId + ':' + row.bucketId">
                 <li class="checklist-row"
-                    :class="isChecked(row.entry, bucket.id) ? 'checklist-row-checked' : ''"
-                    @click="toggleChecked(row.entry, bucket.id)">
-                  <span class="checklist-checkbox" :class="isChecked(row.entry, bucket.id) ? 'checklist-checkbox-checked' : ''">
-                    <span x-show="isChecked(row.entry, bucket.id)">✓</span>
+                    :class="isChecked(row.entry, row.bucketId) ? 'checklist-row-checked' : ''"
+                    @click="toggleChecked(row.entry, row.bucketId)">
+                  <span class="checklist-checkbox" :class="isChecked(row.entry, row.bucketId) ? 'checklist-checkbox-checked' : ''">
+                    <span x-show="isChecked(row.entry, row.bucketId)">✓</span>
                   </span>
                   <span class="checklist-icon" x-text="row.catalogItem.icon"></span>
                   <span class="checklist-name" x-text="row.catalogItem.name"></span>
+                  <span class="checklist-source-icon" x-show="bucket.id === '__unchecked__'" x-text="bucketIcon(row.bucketId)"></span>
                   <span class="qty-badge" x-text="'×' + row.entry.quantity"></span>
                 </li>
               </template>

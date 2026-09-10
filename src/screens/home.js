@@ -181,7 +181,7 @@ export function renderHome(container) {
                   @touchstart="startPress(trip)" @touchend="cancelPress()" @touchmove="cancelPress()"
                   @mousedown="startPress(trip)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
                   @contextmenu.prevent>
-                <span x-text="trip.name"></span>
+                <span x-text="'✈️ ' + trip.name"></span>
                 <span class="card-sub" x-show="trip.date" x-text="trip.date"></span>
               </li>
             </template>
