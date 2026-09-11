@@ -765,14 +765,17 @@ body {
 
 @media (min-width: 768px) {
   .bucket-panels {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 16px;
     align-items: start;
+    overflow-x: auto;
+    padding-bottom: 8px;
   }
 
   .bucket-panel {
     display: block;
+    flex: 0 0 280px;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
