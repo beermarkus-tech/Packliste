@@ -20,7 +20,7 @@ TABS.forEach((tab) => registerRoute(tab.path, tab.render));
 window.Alpine = Alpine;
 Alpine.start();
 
-document.getElementById('build-badge').textContent = `#${import.meta.env.VITE_BUILD_NUMBER || 'dev'}`;
+document.getElementById('build-badge').textContent = `#${import.meta.env.VITE_BUILD_NUMBER || 'dev'}m`;
 
 const app = document.querySelector('#app');
 let shellStarted = false;
