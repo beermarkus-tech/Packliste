@@ -130,7 +130,7 @@ export function renderSettings(container) {
           <h3>New Bucket</h3>
           <input type="text" class="text-input" x-model="newBucketIcon" placeholder="Icon" maxlength="4" />
           <input type="text" class="text-input" x-model="newBucketName" placeholder="Bucket name" autofocus />
-          <button @click="submitNewBucket()">Add</button>
+          <button class="btn-primary" @click="submitNewBucket()">Add</button>
           <button class="btn-secondary" @click="closeNewBucket()">Cancel</button>
         </div>
       </div>

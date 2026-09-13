@@ -607,7 +607,7 @@ export function renderPrep(container) {
             x-model="newItemNewCategory"
             placeholder="New category name"
           />
-          <button @click="submitNewItem()">Add</button>
+          <button class="btn-primary" @click="submitNewItem()">Add</button>
           <button class="btn-secondary" @click="closeAddItem()">Cancel</button>
         </div>
       </div>
@@ -636,7 +636,7 @@ export function renderPrep(container) {
             <span class="qty-value" x-text="quantityModal ? quantityFor(quantityModal) : ''"></span>
             <button class="qty-btn" @click="changeQuantity(quantityModal, 1)">+</button>
           </span>
-          <button class="btn-secondary" @click="closeQuantityModal()">Done</button>
+          <button class="btn-primary" @click="closeQuantityModal()">Done</button>
         </div>
       </div>
 
@@ -658,7 +658,7 @@ export function renderPrep(container) {
             x-model="editItemNewCategory"
             placeholder="New category name"
           />
-          <button @click="submitEditItem()">Save</button>
+          <button class="btn-primary" @click="submitEditItem()">Save</button>
           <button class="danger" @click="deleteEditItem()">Delete item</button>
           <button class="btn-secondary" @click="closeEditItem()">Cancel</button>
         </div>
@@ -687,7 +687,7 @@ export function renderPrep(container) {
               <span class="bucket-toggle-check" x-show="bucketModal && isAssigned(bucketModal, bucket.id)">✓</span>
             </button>
           </template>
-          <button class="btn-secondary" @click="closeBucketModal()">Done</button>
+          <button class="btn-primary" @click="closeBucketModal()">Done</button>
         </div>
       </div>
     </div>

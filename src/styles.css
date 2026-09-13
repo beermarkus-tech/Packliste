@@ -5,6 +5,7 @@
   --color-primary-pressed: #0B5E66;
   --color-accent: #F2994A;
   --color-success: #2F9E44;
+  --color-danger: #DC2626;
   --color-bg: #F7F5F1;
   --color-surface: #FFFFFF;
   --color-text: #1F2937;
@@ -24,6 +25,7 @@
     --color-primary-pressed: #4FB4BC;
     --color-accent: #F5A962;
     --color-success: #4CB963;
+    --color-danger: #F87171;
     --color-bg: #121417;
     --color-surface: #1C1F23;
     --color-text: #E5E7EB;
@@ -253,10 +255,38 @@ body {
   font-size: 15px;
 }
 
-.modal-sheet button.danger {
+/* Selection/menu buttons (Open, Duplicate, Rename, category names, bucket
+   toggles, ...) use the bare .modal-sheet button style above: flat,
+   left-aligned, low visual weight — they're choices, not confirmations.
+   Action/confirmation buttons (below) are deliberately distinct: centered
+   and higher-contrast, so "the thing this modal actually does" never blends
+   into a list of options. Primary is the one confirming/forward action a
+   modal can have; danger is deliberately the LEAST visually tempting of the
+   three — red text on a flat background, not a solid fill — since it's
+   destructive and shouldn't be the first thing your eye or thumb lands on. */
+.modal-sheet button.btn-primary {
+  text-align: center;
+  font-weight: 600;
+  background: var(--color-primary);
   color: white;
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  border-color: var(--color-primary);
+}
+
+.modal-sheet button.btn-primary:active {
+  background: var(--color-primary-pressed);
+}
+
+.modal-sheet button.btn-secondary {
+  text-align: center;
+  background: var(--color-surface);
+}
+
+.modal-sheet button.danger {
+  text-align: center;
+  font-weight: 600;
+  color: var(--color-danger);
+  background: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 .modal-sheet-centered {
