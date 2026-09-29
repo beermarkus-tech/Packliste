@@ -3,6 +3,7 @@ import { watchBuckets, createBucket, renameBucket, deleteBucket } from '../data/
 import { signOutUser } from '../lib/auth.js';
 
 const LONG_PRESS_MS = 500;
+const BUILD_LABEL = `#${import.meta.env.VITE_BUILD_NUMBER || 'dev'}m`;
 
 Alpine.data('settings', () => ({
   buckets: [],
@@ -114,6 +115,11 @@ export function renderSettings(container) {
       <section class="settings-section">
         <h3>Account</h3>
         <button class="btn-secondary" @click="signOut()">Sign out</button>
+      </section>
+
+      <section class="settings-section">
+        <h3>About</h3>
+        <p class="card-sub">Build ${BUILD_LABEL}</p>
       </section>
 
       <div class="modal-overlay" x-show="actionSheet" x-cloak @click.self="closeActionSheet()">
