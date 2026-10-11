@@ -125,6 +125,17 @@ Alpine.data('checklist', () => ({
     return this.buckets.find((bucket) => bucket.name === 'Hinreise');
   },
 
+  get lastMinuteBucket() {
+    return this.buckets.find((bucket) => bucket.lastMinute);
+  },
+
+  // Red-dot marker: this row's item is also on the last-minute list. Never
+  // shown for rows that *are* the last-minute list itself.
+  isAlsoLastMinute(row) {
+    const lm = this.lastMinuteBucket;
+    return !!lm && row.bucketId !== lm.id && this.isInBucket(row.entry, lm.id);
+  },
+
   isChecked(entry, bucketId) {
     return !!entry.checked?.[bucketId];
   },
@@ -283,6 +294,7 @@ export function renderChecklist(container) {
                   </span>
                   <span class="checklist-icon" x-text="row.catalogItem.icon"></span>
                   <span class="checklist-name" x-text="row.catalogItem.name"></span>
+                  <span class="last-minute-dot" x-show="isAlsoLastMinute(row)" title="Also on the last-minute list"></span>
                   <span class="checklist-source-icon" x-show="bucket.id === '__unchecked__'" x-text="bucketIcon(row.bucketId)"></span>
                   <span class="qty-badge" x-text="'×' + row.entry.quantity"></span>
                 </li>

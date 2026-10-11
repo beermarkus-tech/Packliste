@@ -763,6 +763,21 @@ body {
   text-decoration: line-through;
 }
 
+.last-minute-dot {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-danger);
+}
+
+.last-minute-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .checklist-source-icon {
   flex: 0 0 auto;
   opacity: 0.6;

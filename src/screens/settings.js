@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import { watchBuckets, createBucket, renameBucket, deleteBucket } from '../data/buckets.js';
+import { watchBuckets, createBucket, renameBucket, deleteBucket, setLastMinuteBucket } from '../data/buckets.js';
 import { signOutUser } from '../lib/auth.js';
 
 const LONG_PRESS_MS = 500;
@@ -47,6 +47,16 @@ Alpine.data('settings', () => ({
       await renameBucket(bucket.id, name);
     } catch (err) {
       alert(`Couldn't rename: ${err.message}`);
+    }
+  },
+
+  async doToggleLastMinute() {
+    const { bucket } = this.actionSheet;
+    this.closeActionSheet();
+    try {
+      await setLastMinuteBucket(bucket.lastMinute ? null : bucket.id);
+    } catch (err) {
+      alert(`Couldn't update: ${err.message}`);
     }
   },
 
@@ -107,9 +117,13 @@ export function renderSettings(container) {
                 @mousedown="startPress(bucket)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
                 @contextmenu.prevent>
               <span x-text="bucket.icon + ' ' + bucket.name"></span>
+              <span class="card-sub last-minute-tag" x-show="bucket.lastMinute">
+                <span class="last-minute-dot"></span>Last-minute list
+              </span>
             </li>
           </template>
         </ul>
+        <p class="card-sub" x-show="buckets.length > 0">Long-press a bucket to rename it, delete it, or mark it as your last-minute list.</p>
       </section>
 
       <section class="settings-section">
@@ -126,6 +140,8 @@ export function renderSettings(container) {
         <div class="modal-sheet" x-show="actionSheet">
           <h3 x-text="actionSheet?.bucket?.name"></h3>
           <button @click="doRename()">Rename</button>
+          <button @click="doToggleLastMinute()"
+                  x-text="actionSheet?.bucket?.lastMinute ? 'Unmark as last-minute list' : 'Mark as last-minute list'"></button>
           <button class="danger" @click="doDelete()">Delete</button>
           <button class="btn-secondary" @click="closeActionSheet()">Cancel</button>
         </div>

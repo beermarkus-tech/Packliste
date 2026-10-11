@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 
 const bucketsRef = collection(db, 'buckets');
@@ -21,6 +21,19 @@ export async function createBucket({ name, icon }) {
 
 export async function renameBucket(id, name) {
   await updateDoc(doc(db, 'buckets', id), { name });
+}
+
+// At most one bucket is the "last minute" list — marking one clears the flag
+// on every other bucket in the same batch, so there's never a moment with two.
+// Pass null to clear it everywhere.
+export async function setLastMinuteBucket(id) {
+  const snap = await getDocs(bucketsRef);
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => {
+    const shouldBe = d.id === id;
+    if (!!d.data().lastMinute !== shouldBe) batch.update(d.ref, { lastMinute: shouldBe });
+  });
+  await batch.commit();
 }
 
 // Existing item entries referencing this bucket's id just become harmless
