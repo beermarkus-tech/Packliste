@@ -46,9 +46,11 @@ Alpine.data('home', () => ({
     clearTimeout(this.pressTimer);
   },
 
-  openItem(type, id) {
+  // Existing trips open straight on their checklist; the database and
+  // freshly created trips still land on Prep, where they get set up.
+  openItem(type, id, screen = 'prep') {
     setCurrentItem({ type, id });
-    navigateTo('prep');
+    navigateTo(screen);
   },
 
   openDatabase() {
@@ -72,7 +74,7 @@ Alpine.data('home', () => ({
   async doOpen() {
     const { item } = this.actionSheet;
     this.closeActionSheet();
-    this.openItem('trip', item.id);
+    this.openItem('trip', item.id, 'checklist');
   },
 
   async doDuplicate() {
@@ -177,7 +179,7 @@ export function renderHome(container) {
           <ul class="card-list">
             <template x-for="trip in trips" :key="trip.id">
               <li class="card-item"
-                  @click="openItem('trip', trip.id)"
+                  @click="openItem('trip', trip.id, 'checklist')"
                   @touchstart="startPress(trip)" @touchend="cancelPress()" @touchmove="cancelPress()"
                   @mousedown="startPress(trip)" @mouseup="cancelPress()" @mouseleave="cancelPress()"
                   @contextmenu.prevent>
